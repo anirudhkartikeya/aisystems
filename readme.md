@@ -5,7 +5,7 @@ Data collection work for a simulated mobile robot navigation project that compar
 ## Dataset
 - Name: ETH/UCY pedestrian trajectories (ETH, Hotel, Univ, Zara1, Zara2), preprocessed
 - Downloaded from: https://github.com/InhwanBae/NPSN (folder `dataset/`)
-- Version: commit (- Version: commit 9d2fca3 (full hash 9d2fca316feb6b1235ace0184a0a4d8838dd5436)
+- Version: commit (Version: commit 9d2fca3 (full hash 9d2fca316feb6b1235ace0184a0a4d8838dd5436))
 - Retrieved: Oct 5, 2026
 - Original sources: ETH (BIWI Walking Pedestrians): https://data.vision.ee.ethz.ch/cvl/aem/ewap_dataset_full.tgz. UCY: https://graphics.cs.ucy.ac.cy/research/downloads/crowd-data
 - Storage: Google Drive, folder pybullet-nav-data/eth_ucy/raw/dataset (about 19 MB). The data is not stored in this repo.
