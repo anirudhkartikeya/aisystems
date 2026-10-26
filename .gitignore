@@ -3,3 +3,6 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 venv/
+robot_nav_project/trajectories/
+robot_nav_project/dataset/
+__pycache__/

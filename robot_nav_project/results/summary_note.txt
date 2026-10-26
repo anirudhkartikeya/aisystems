@@ -1,0 +1,15 @@
+SUMMARY NOTE (numbers from this run)
+- Scope: this is a first training sample (a short exploratory run). The LSTM is not yet integrated into the
+  car's driving loop - the car still drives with the constant-velocity and reactive brains; plugging it in is next.
+- Selected candidate: a one-layer LSTM (hidden 64) that predicts a pedestrian's next 8 positions (3.2 s) from their recent
+  track; first stage explored = prediction, because the car's planner depends on it (detection with YOLO comes next).
+- Initial result (run 1, history 2.8 s, 5 epochs, 200,000 training examples, 56,021 validation examples):
+  ADE 0.566 m, FDE 1.205 m, vs constant velocity ADE 0.583 m, FDE 1.236 m
+  and stay-put ADE 1.599 m, FDE 2.793 m.
+- Observed failure: the largest errors (worst 5%) are most typical of people who changed what they were doing (e.g. walking -> waiting at the kerb, waiting -> crossing):
+  54% of the worst cases vs 31% of all examples.
+- Practical constraint: 0.22 ms on CPU for 30 people at once (target 100 ms) - well within it.
+- Targeted change (run 2): longer history, 12 points (4.4 s) instead of 8 - ADE 0.567 m (+0.002), FDE 1.205 m
+  (-0.000). The change made no clear difference.
+- Next steps: plug the LSTM into the car as the "lstm" brain (brains.py) and compare it with the reactive and predictive
+  brains in closed loop with evaluate.py; then train YOLO on the camera dataset. The test split is still unused.

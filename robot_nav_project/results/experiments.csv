@@ -1,0 +1,5 @@
+run,config,change,ADE_m,FDE_m,val_examples,train_time_s,infer_ms_30_people
+Stay-put (reactive brain),no learning,-,1.5986603498458862,2.7928545475006104,56021,0.0,
+Constant velocity (predictive brain),no learning,-,0.5829616189002991,1.2361106872558594,56021,0.0,
+LSTM run 1,"LSTM 1 layer, hidden 64, history 8 pts, lr 0.001, batch 512, 5 epochs, seed 0",first configuration (history 8 points = 2.8 s),0.5657548904418945,1.2048070430755615,56021,4.301735877990723,0.21587979499599896
+LSTM run 2,"LSTM 1 layer, hidden 64, history 12 pts, lr 0.001, batch 512, 5 epochs, seed 0",longer history: 12 points (4.4 s) instead of 8,0.5674869418144226,1.2045191526412964,56021,4.859206914901733,0.312659790070029
