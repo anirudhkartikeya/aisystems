@@ -1,0 +1,5 @@
+run,change,ADE_m,FDE_m,val_examples,train_time_s,infer_ms_30_people,FDE HARD: person changes what they do (stop / start crossing / turn back),FDE on the road in the next 3.2 s,FDE a car within 10 m,FDE children,FDE elderly
+constant velocity (predictive brain),-,0.5829616,1.2361107,56021,0.0,,1.9580227,1.297158,1.2748859,1.3762527,0.9477595
+LSTM v1 (homework run 1),homework configuration,0.57381696,1.213304,56021,13.2,0.23282542009837925,1.641684,1.4089417,1.2383667,1.2719461,0.91752625
+LSTM v2 without context,"correction to const. velocity, all data, longer training",0.49551836,1.0797135,56021,237.7,2.9011483301292174,1.5695475,1.2092359,1.1137878,1.1305819,0.82622665
+LSTM v2 with context,"+ context: kerb, crossing + light, cars, nearby people",0.45457527,0.9569055,56021,300.2,2.912039160146378,1.4239323,0.9374196,0.97972953,0.96245646,0.7491542

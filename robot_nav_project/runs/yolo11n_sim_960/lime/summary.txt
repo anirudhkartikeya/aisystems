@@ -1,0 +1,32 @@
+YOLO runs/yolo11n_sim_960/weights/best.pt on 378 val pictures (imgsz 960, conf 0.25)
+LIME: 300 perturbed copies per person, about 50 SLIC superpixels around each person
+
+PEOPLE YOLO FOUND (12): positive weight on the person's own box 26% on average; fit R2 0.85; confidence 0.70 -> hiding the top-3 superpixels 0.14 vs 3 random 0.68
+PEOPLE YOLO MISSED (6): best confidence at their box 0.29; inside share 21%; fit R2 0.71
+
+Per person:
+person 1, status found, size tiny, picture street_s0035_t0180.jpg, box_h_px 12.0, superpixels 42, conf 0.544, inside_share 0.274, fit_R2 0.915, conf_hide_top3 0.458, conf_hide_random3 0.537
+person 2, status found, size tiny, picture town_s0075_t0300.jpg, box_h_px 6.0, superpixels 33, conf 0.429, inside_share 0.245, fit_R2 0.797, conf_hide_top3 0.0, conf_hide_random3 0.418
+person 3, status found, size tiny, picture street_s0056_t0280.jpg, box_h_px 9.0, superpixels 38, conf 0.472, inside_share 0.043, fit_R2 0.537, conf_hide_top3 0.466, conf_hide_random3 0.468
+person 4, status found, size small, picture town_s0076_t0010.jpg, box_h_px 25.0, superpixels 38, conf 0.597, inside_share 0.245, fit_R2 0.956, conf_hide_top3 0.016, conf_hide_random3 0.478
+person 5, status found, size small, picture town_s0054_t0040.jpg, box_h_px 26.0, superpixels 36, conf 0.812, inside_share 0.257, fit_R2 0.999, conf_hide_top3 0.0, conf_hide_random3 0.803
+person 6, status found, size small, picture town_s0094_t0280.jpg, box_h_px 22.0, superpixels 37, conf 0.605, inside_share 0.208, fit_R2 0.874, conf_hide_top3 0.0, conf_hide_random3 0.601
+person 7, status found, size medium, picture street_s0014_t0050.jpg, box_h_px 29.0, superpixels 36, conf 0.77, inside_share 0.312, fit_R2 0.992, conf_hide_top3 0.0, conf_hide_random3 0.771
+person 8, status found, size medium, picture town_s0054_t0010.jpg, box_h_px 29.0, superpixels 30, conf 0.624, inside_share 0.34, fit_R2 0.959, conf_hide_top3 0.001, conf_hide_random3 0.479
+person 9, status found, size medium, picture town_s0054_t0380.jpg, box_h_px 33.0, superpixels 32, conf 0.811, inside_share 0.342, fit_R2 0.917, conf_hide_top3 0.0, conf_hide_random3 0.798
+person 10, status found, size large, picture street_s0074_t0030.jpg, box_h_px 98.0, superpixels 40, conf 0.924, inside_share 0.317, fit_R2 0.862, conf_hide_top3 0.001, conf_hide_random3 0.921
+person 11, status found, size large, picture street_s0035_t0360.jpg, box_h_px 83.0, superpixels 44, conf 0.893, inside_share 0.18, fit_R2 0.523, conf_hide_top3 0.78, conf_hide_random3 0.891
+person 12, status found, size large, picture street_s0035_t0220.jpg, box_h_px 136.0, superpixels 35, conf 0.943, inside_share 0.339, fit_R2 0.865, conf_hide_top3 0.009, conf_hide_random3 0.943
+person 13, status MISSED, size small, picture town_s0094_t0250.jpg, box_h_px 15.0, superpixels 36, conf 0.096, inside_share 0.092, fit_R2 0.779, conf_hide_top3 0.004, conf_hide_random3 0.061
+person 14, status MISSED, size medium, picture town_s0054_t0380.jpg, box_h_px 70.0, superpixels 36, conf 0.816, inside_share 0.105, fit_R2 0.642, conf_hide_top3 0.284, conf_hide_random3 0.813
+person 15, status MISSED, size small, picture town_s0036_t0180.jpg, box_h_px 16.0, superpixels 33, conf 0.094, inside_share 0.207, fit_R2 0.831, conf_hide_top3 0.0, conf_hide_random3 0.085
+person 16, status MISSED, size medium, picture town_s0096_t0370.jpg, box_h_px 31.0, superpixels 30, conf 0.012, inside_share 0.116, fit_R2 0.501, conf_hide_top3 0.0, conf_hide_random3 0.008
+person 17, status MISSED, size small, picture street_s0074_t0090.jpg, box_h_px 21.0, superpixels 37, conf 0.462, inside_share 0.334, fit_R2 0.687, conf_hide_top3 0.224, conf_hide_random3 0.512
+person 18, status MISSED, size medium, picture town_s0034_t0220.jpg, box_h_px 39.0, superpixels 37, conf 0.235, inside_share 0.392, fit_R2 0.848, conf_hide_top3 0.0, conf_hide_random3 0.148
+
+LABEL CHECK: 36 confident YOLO boxes (conf >= 0.5) have no label:
+    19  box overlaps a label (duplicate / bad fit)
+    14  no label nearby: look at it
+     3  likely a far person missed by the 6-px rule
+  -> open unlabeled_detections.png, decide for each: real person (label missing) or false detection,
+     and write it in the 'your_verdict' column of unlabeled_detections.csv

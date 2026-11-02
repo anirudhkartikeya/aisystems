@@ -597,16 +597,21 @@ class CrossingPedestrian(Pedestrian):
         return (0.2 if self._on_sidewalk() else config.CROSSER_ROAD_PACE) * self.base_speed
 
     def _car_in_the_way(self, robot):
-        """True if the car is within 1 m of where this person is about to walk."""
+        """True if the car is in the way of where this person is about to walk: a moving car
+        within 1 m of their next 1.5 m. A STOPPED car (it is waiting for them) only counts if
+        their next steps would actually walk into it (within 0.3 m) - otherwise they walk on,
+        as people do, instead of both waiting for each other for ever."""
         dx, dy = self.end[0] - self.x, self.end[1] - self.y
         n = math.hypot(dx, dy)
         if n < 1e-6:
             return False
         ux, uy = dx / n, dy / n
-        for k in (0.0, 0.5, 1.0, 1.5):
+        moving = self._robot_moving(robot)
+        margin, steps = (1.0, (0.0, 0.5, 1.0, 1.5)) if moving else (0.3, (0.5, 1.0, 1.5))
+        for k in steps:
             px, py = self.x + ux * k, self.y + uy * k
             for cx, cy, cr in robot["footprint"]:
-                if math.hypot(px - cx, py - cy) < cr + self.radius + 1.0:
+                if math.hypot(px - cx, py - cy) < cr + self.radius + margin:
                     return True
         return False
 

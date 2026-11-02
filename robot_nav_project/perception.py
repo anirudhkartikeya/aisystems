@@ -13,8 +13,10 @@ it before it swerves.
 For every person it has seen, perception keeps a short TRACK: their last few
 positions with times. The brains only ever get these tracks, never the
 simulator's own lists, so they work with the same kind of information YOLO
-will give in Phase 2. (The positions are exact here; set PERCEPTION_NOISE to
-add measurement noise.)
+will give in Phase 2. (The positions are exact here. For stress tests, config can add
+camera faults: PERCEPTION_NOISE = random position error, PERCEPTION_MISS_RATE = share of
+camera sightings lost, PERCEPTION_DELAY = the brain gets positions this many seconds old,
+with their true time stamps. All are 0 = off by default.)
 """
 import math
 from collections import deque
@@ -48,6 +50,8 @@ class Perception:
         self._occluders = None
 
     def reset(self):
+        self.rng = np.random.default_rng([int(getattr(self.sim, "seed", 0) or 0), 77])   # faults differ per seed
+        self._past = {}             # person id -> recent true positions (for PERCEPTION_DELAY)
         self.tracks.clear()
         self.visible = set()
         self.vehicles = []
@@ -94,7 +98,11 @@ class Perception:
             occ = occ[near]
 
         self.visible = set()
+        delay = config.PERCEPTION_DELAY
         for ped in sim.peds:
+            if delay > 0:
+                past = self._past.setdefault(ped.ped_id, deque(maxlen=int(delay / config.CONTROL_DT) + 3))
+                past.append((t, ped.x, ped.y))
             dx, dy = ped.x - cx, ped.y - cy
             if abs(dx) > R + 4 or abs(dy) > R + 4:
                 continue
@@ -108,15 +116,25 @@ class Perception:
                     in_view = not self._blocked(cx, cy, ped.x, ped.y, occ, car_circles)
             if not (in_view or close):
                 continue
-            self.visible.add(ped.ped_id)
+            if in_view and not close and config.PERCEPTION_MISS_RATE > 0 and \
+                    self.rng.random() < config.PERCEPTION_MISS_RATE:
+                continue                                  # the detector missed them in this frame
+            t_meas, x, y = t, ped.x, ped.y
             track = self.tracks.get(ped.ped_id)
+            if delay > 0:                                 # what the camera saw `delay` seconds ago
+                old = [p for p in self._past[ped.ped_id] if p[0] <= t - delay + 1e-6]
+                if not old:
+                    continue
+                t_meas, x, y = old[-1]
+                if track is not None and track.history and t_meas <= track.history[-1][0]:
+                    continue
+            self.visible.add(ped.ped_id)
             if track is None:
                 track = self.tracks[ped.ped_id] = Track(ped.ped_id, config.PED_RADIUS)
-            x, y = ped.x, ped.y
             if config.PERCEPTION_NOISE > 0:
                 x += float(self.rng.normal(0, config.PERCEPTION_NOISE))
                 y += float(self.rng.normal(0, config.PERCEPTION_NOISE))
-            track.history.append((t, x, y))
+            track.history.append((t_meas, x, y))
             track.last_seen = t
 
         # forget people not seen for a while

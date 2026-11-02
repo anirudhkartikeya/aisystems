@@ -1,0 +1,914 @@
+{
+ "dataset": "run_data/v1",
+ "description": "Core navigation comparison: the same seeds driven by each brain; simulator positions of people (perfect sensing, no camera / YOLO).",
+ "created": "2026-11-01T17:05:21",
+ "command": "python make_run_dataset.py",
+ "seconds_to_make": 47.5,
+ "code_version": "13c5e6408a96",
+ "code_files_sha256": {
+  "analyze_yolo.py": "3b4ea3221200bed28b7d5c08d7176d4123196f0803a9357871bd73bb9fbbd238",
+  "brains.py": "8fa602ba1eb44913eac0746c4b84793279b97d94a9a83a02ff35d6d7a3d18a58",
+  "camera.py": "7d4ac6704dc16508babe92ef6b21a45442a863a588cf8e3c021617029f66ce6c",
+  "check_run_dataset.py": "ac85a5aab11f83eb259a79e02dceb980c5040de01a3ce89a080c613b16d3a22d",
+  "config.py": "397ebb20aa79042d2320d4a9c56550bbe9dbafe10609350fe3c3e09d8359570f",
+  "controllers.py": "776ba70b461347e1d381746b2febb45b7c9049e5f5074f8e3d94977e7dd2cfab",
+  "datasets.py": "91149d4a53876aeaae8a8c2cbf86f05f9ff39fe7ebaf10ec77686bcdfe123891",
+  "evaluate.py": "0f57f7835c19add413cce371eb50c467440164979eb3cb9e3ed6a79cd82af2f7",
+  "lstm_features.py": "f1fdd85ab2a7c2a65f9914879739076e52bc78bfbb8fcbd252ce08c8969ba5ad",
+  "make_data.py": "6c18c3039e8a35d389dfc3116e01f9d1116af696de61f0e104e2f1dc241d7810",
+  "make_models.py": "0af351f12c3e2f963344552f8f5e1b9423f218fd22e43cf023ff8e4ebdc8e63e",
+  "make_run_dataset.py": "f62fc2d5bb5ed6a32a3bc9f1e13b6fc8c5ada5c536541530c583295daad5245e",
+  "make_yolo_data.py": "5a71175f83ffcb504f8d3f534a6f39565f47ddaa63109551f413d88a8784898f",
+  "metrics.py": "20035e072e5fd077e45a3728d6d526a197398157521e98a3709611dd1353088c",
+  "model_specs.py": "5d22e3ab3c2775f9e53b0e0b40a8a5ea3fedb6b0784b15b426ad009b45fbfcb8",
+  "pedestrians.py": "a886fd68c0a049b444977f7b1f8c442e34f3b467420057301af1e4a6941f577b",
+  "perception.py": "40ca28a6cb992c368ae8b63e3a7fbcf3f2c36a17657fb4752fbddd9162bac4a2",
+  "planner.py": "3bbb59a79ee271bf06ef4a77e0855f712a57d4ab42a135460e6572c37bfaf21e",
+  "roadmap.py": "b4ebddb5b1e4a1feec074f75d384dbdb3820da4eb73e1d386b7ba0bb71eb410b",
+  "robot.py": "0d2f261ef628b8bead69776e00870e03159ceba4ff8089627708d05beeec3e15",
+  "run_sim.py": "0dafcb2a90948bcda295057af0a661cca4f9c8da4dabffeb6dce158871f65ab9",
+  "scenarios.py": "8ff7edd6e15176079bef438f252bdcf3ed434f0b2f778b4019b047537d852717",
+  "simulation.py": "e8cc719c362df2dea1f8528f72dbbed87ac0f33d2a57edcabaa1a2463b2447b2",
+  "test_near_miss.py": "2f59e0f114dfca0c74504ffbcb38343ecd9e1eb8396ce079c789af37cb561fba",
+  "textures.py": "2b0dc23f4138a8d75805a085e3dfbcac9181373abd815dacf63a607c4a1f6ba5",
+  "traffic.py": "53ddc9855bfe8a58b6195a59f3a0516080dba109e20fbe2c448f985895b509be",
+  "train_lstm.py": "d2a5c73226ad63f8515aee2ff3f928b2787e96ea815845c25f3f61a13df0d99e",
+  "train_yolo.py": "a59565ac844b42311b5f82cae6bf4b8a514c6ae4e26ff04ebe1a7347574db462",
+  "visuals.py": "5052b62da944d7d091430ed276eef8d144219172f519e65c138edbf5230446da",
+  "world.py": "13d99d0a23757656a61524474f4c709af264361901f7f5288547496fd3b0bfb6"
+ },
+ "versions": {
+  "python": "3.10.20",
+  "numpy": "1.26.4",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "pybullet": "3.2.5"
+ },
+ "brains": [
+  "reactive",
+  "predictive"
+ ],
+ "layout": "town",
+ "scenario": "crossing",
+ "seeds": {
+  "dev": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19
+  ],
+  "eval": [
+   1000,
+   1001,
+   1002,
+   1003,
+   1004,
+   1005,
+   1006,
+   1007,
+   1008,
+   1009
+  ]
+ },
+ "split_rule": "dev = seeds 0-19 (tuning may use these); eval = seeds 1000-1009, never run before this dataset, reserved for the final comparison. Whole runs (seeds) are assigned, never steps.",
+ "variation_per_seed": {
+  "CROSSING_TIMING_JITTER": 1.0,
+  "CROSSING_SPEED_JITTER": 0.2,
+  "background_people": [
+   10,
+   24
+  ],
+  "traffic_cars": [
+   4,
+   12
+  ],
+  "PED_AWARE_SHARE": [
+   0.6,
+   0.9
+  ],
+  "PED_PHONE_SHARE": [
+   0.05,
+   0.25
+  ],
+  "PED_JAYWALKER_SHARE": [
+   0.0,
+   0.25
+  ],
+  "PED_PAUSE_RATE": [
+   0.01,
+   0.04
+  ],
+  "PED_TURN_BACK_PROB": [
+   0.0,
+   0.08
+  ]
+ },
+ "fixed_settings": {
+  "STOP_ON_COLLISION": false,
+  "CONTROL_DT_s": 0.1,
+  "MAX_TIME_s": 200.0
+ },
+ "metric_definitions": {
+  "gap": "surface-to-surface distance between the car (3 circles) and a person (circle), metrics.surface_gap; < 0 = contact",
+  "near_miss": "0 <= gap < 0.5 m, counted once per person until the gap opens past 0.8 m (metrics.count_contacts_and_near_misses)",
+  "min_gap (runs.csv)": "smallest gap to any person within 6 m, checked every 0.01 s (physics sub-steps)"
+ },
+ "units": {
+  "t": "s since the run started",
+  "x": "m (world)",
+  "y": "m (world)",
+  "heading": "rad",
+  "vx": "m/s",
+  "vy": "m/s",
+  "speed": "m/s",
+  "cmd_vx": "m/s, velocity the planner asked for",
+  "cmd_vy": "m/s",
+  "gap_to_car": "m, surface-to-surface gap car <-> person (metrics.surface_gap); < 0 = contact",
+  "done": "1 on the last step (the run ended here)",
+  "step": "0.1 s control steps, 1 = after the first step"
+ },
+ "files": {
+  "split.csv": {
+   "sha256": "3902c6a7c7fca0937762c6eb6e35cfe0808484f7e3b514369ce0d2791cbd1343",
+   "bytes": 883,
+   "rows": 30
+  },
+  "scenarios.csv": {
+   "sha256": "d1f0b1a544f5fb0d8457977dd486f05b066a36434f02c4f89a964cb0a3e547d7",
+   "bytes": 7356,
+   "rows": 30
+  },
+  "runs.csv": {
+   "sha256": "41b703ce4e131059bdc162ae23cf0eb8c3e8782ab1cede4576d27d4a57d24dd6",
+   "bytes": 8052,
+   "rows": 60
+  },
+  "crossers.csv": {
+   "sha256": "b53f0faaa4c5e9b0dd3baaec4bbe9f013b9e439d9b75cc844d289bd7b67213be",
+   "bytes": 25670,
+   "rows": 300
+  },
+  "people_info.csv": {
+   "sha256": "98c94eacccb9cb0b2258125165c35a35919a9693978ccc9aaa9fa00031ac5c0f",
+   "bytes": 84281,
+   "rows": 1344
+  },
+  "robot_steps.csv.gz": {
+   "sha256": "a38d51b529f6022d50ab7ce5dc9a75c2ca7307d5406078efcbf80caa5c30858b",
+   "bytes": 1602624,
+   "rows": 70654
+  },
+  "people_steps.csv.gz": {
+   "sha256": "9b65432669ef5f5e7e4a564e1762a926941f2106f70c002be59f8096855025c7",
+   "bytes": 24965886,
+   "rows": 1587628
+  },
+  "vehicle_steps.csv.gz": {
+   "sha256": "6887c46e9a18d88e067a7ae0d8be672461c7b0aa6fd097addbdc89b7d6540878",
+   "bytes": 4353036,
+   "rows": 550970
+  }
+ },
+ "config": {
+  "ANIMATE_WALK": true,
+  "BEND_MIN_SPEED": 0.6,
+  "BRAIN": "predictive",
+  "BUILDING_SETBACK": 0.6,
+  "CAMERA_DISTANCE": 14.0,
+  "CAMERA_EVERY": 10,
+  "CAMERA_FAR": 60.0,
+  "CAMERA_FOV": 60.0,
+  "CAMERA_HEIGHT_PX": 480,
+  "CAMERA_JITTER": {
+   "height": 0.1,
+   "pitch_deg": 3.0,
+   "yaw_deg": 2.0,
+   "fov_deg": [
+    52.0,
+    70.0
+   ]
+  },
+  "CAMERA_MIN_BOX": 6,
+  "CAMERA_MIN_PIXELS": 25,
+  "CAMERA_MOUNT_HEIGHT": 1.3,
+  "CAMERA_NEAR": 0.05,
+  "CAMERA_PITCH": -30.0,
+  "CAMERA_SMOOTH": 0.6,
+  "CAMERA_VIEW": "chase",
+  "CAMERA_WIDTH": 640,
+  "CAR_CAMERA_HEIGHT": 1.3,
+  "CAR_GOAL_TOLERANCE": 1.0,
+  "CAR_HEIGHT": 1.45,
+  "CAR_LENGTH": 3.8,
+  "CAR_MAX_ACCEL": 2.0,
+  "CAR_MAX_SPEED": 2.0,
+  "CAR_WIDTH": 1.7,
+  "COMFORT_DECEL": 1.0,
+  "CONTROL_DT": 0.1,
+  "CONTROL_HZ": 10,
+  "COST_CHANGE": 0.5,
+  "COST_HARD_BRAKE": 1.0,
+  "COST_ONCOMING": 4.0,
+  "COST_PED_CLOSE": 8.0,
+  "COST_SIDEWAYS": 1.0,
+  "COST_SLOW": 3.5,
+  "COST_VEH_CLOSE": 3.0,
+  "COST_WAIT": 1.0,
+  "CROSSERS": {
+   "room": [
+    {
+     "at": 0.6,
+     "side": "left",
+     "start_offset": 3.0,
+     "end_offset": 3.0,
+     "speed": 1.2
+    }
+   ],
+   "doorway": [
+    {
+     "at": 0.35,
+     "side": "right",
+     "start_offset": 2.5,
+     "end_offset": 1.2,
+     "speed": 1.2
+    }
+   ],
+   "road": [
+    {
+     "at": 0.5,
+     "side": "left",
+     "start_offset": 4.0,
+     "end_offset": 3.0,
+     "speed": 1.2
+    }
+   ]
+  },
+  "CROSSER_CAR_MOVING": 0.6,
+  "CROSSER_RANDOM_CONTACT": 0.8,
+  "CROSSER_ROAD_PACE": 0.85,
+  "CROSSER_STAND_MAX": 12.0,
+  "CROSSER_STOP_LEAD": 3.0,
+  "CROSSING_BACKGROUND_PEDS": {
+   "town": 16,
+   "street": 6,
+   "road": 0,
+   "room": 0,
+   "doorway": 0
+  },
+  "CROSSING_CARS": {
+   "town": 8,
+   "street": 2,
+   "road": 0,
+   "room": 0,
+   "doorway": 0
+  },
+  "CROSSING_SPEED_JITTER": 0.0,
+  "CROSSING_TIMING": 0.0,
+  "CROSSING_TIMING_JITTER": 0.0,
+  "CROSSWALK_WIDTH": 2.0,
+  "CROSSWALK_X": 0.0,
+  "CURB_HEIGHT": 0.12,
+  "DATASET_DIR": "dataset",
+  "DATA_VARIETY": true,
+  "DOOR_WIDTH": 1.4,
+  "DOOR_X": 0.0,
+  "FOLLOW_CAMERA": true,
+  "FURNITURE_LOOK": true,
+  "GOAL": [
+   4.0,
+   4.0
+  ],
+  "GOAL_TOLERANCE": 1.0,
+  "GUI_AGENT_EVERY": 3,
+  "GUI_CAMERA_EVERY": 1,
+  "GUI_SHADOWS": true,
+  "GUI_SKY_COLOR": [
+   0.62,
+   0.78,
+   0.95
+  ],
+  "HARD_BRAKE": 1.5,
+  "HUMAN_LOOK": true,
+  "IMAGE_AUGMENT": {
+   "brightness": 0.15,
+   "contrast": 0.15,
+   "noise": 4.0,
+   "blur_prob": 0.2
+  },
+  "INFLUENCE_RADIUS": 2.0,
+  "LANE_WIDTH": 3.0,
+  "LAYOUT": "town",
+  "LEFT_TURN_GAP": 80.0,
+  "LEFT_TURN_HOLD": 2.0,
+  "LIGHTING": "noon",
+  "LIGHTING_PRESETS": {
+   "noon": {
+    "dir": [
+     0.3,
+     0.4,
+     1.0
+    ],
+    "color": [
+     1.0,
+     1.0,
+     0.97
+    ],
+    "ambient": 0.6,
+    "diffuse": 0.5,
+    "specular": 0.1,
+    "shadow": 1,
+    "sky": [
+     [
+      0.45,
+      0.66,
+      0.95
+     ],
+     [
+      0.8,
+      0.88,
+      0.98
+     ]
+    ]
+   },
+   "morning": {
+    "dir": [
+     1.0,
+     0.5,
+     0.45
+    ],
+    "color": [
+     1.0,
+     0.95,
+     0.85
+    ],
+    "ambient": 0.5,
+    "diffuse": 0.55,
+    "specular": 0.1,
+    "shadow": 1,
+    "sky": [
+     [
+      0.55,
+      0.7,
+      0.92
+     ],
+     [
+      0.95,
+      0.88,
+      0.78
+     ]
+    ]
+   },
+   "evening": {
+    "dir": [
+     -1.0,
+     0.3,
+     0.3
+    ],
+    "color": [
+     1.0,
+     0.78,
+     0.55
+    ],
+    "ambient": 0.4,
+    "diffuse": 0.6,
+    "specular": 0.05,
+    "shadow": 1,
+    "sky": [
+     [
+      0.35,
+      0.4,
+      0.65
+     ],
+     [
+      0.98,
+      0.7,
+      0.45
+     ]
+    ]
+   },
+   "overcast": {
+    "dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "color": [
+     0.88,
+     0.9,
+     0.95
+    ],
+    "ambient": 0.75,
+    "diffuse": 0.25,
+    "specular": 0.02,
+    "shadow": 0,
+    "sky": [
+     [
+      0.62,
+      0.64,
+      0.68
+     ],
+     [
+      0.8,
+      0.81,
+      0.83
+     ]
+    ]
+   },
+   "dusk": {
+    "dir": [
+     -0.5,
+     -1.0,
+     0.15
+    ],
+    "color": [
+     0.75,
+     0.7,
+     0.85
+    ],
+    "ambient": 0.32,
+    "diffuse": 0.4,
+    "specular": 0.02,
+    "shadow": 0,
+    "sky": [
+     [
+      0.12,
+      0.14,
+      0.3
+     ],
+     [
+      0.45,
+      0.35,
+      0.5
+     ]
+    ]
+   }
+  },
+  "LIGHT_ALL_RED": 1.5,
+  "LIGHT_GREEN_MAIN": 15.0,
+  "LIGHT_GREEN_SIDE": 10.0,
+  "LIGHT_LEFT_ARROW": 12.0,
+  "LIGHT_YELLOW": 3.0,
+  "LSTM_MODEL": "results/lstm_v2/lstm_v2.pt",
+  "MAX_TIME": 200.0,
+  "MODELS_DIR": "models",
+  "NEAR_MISS_DIST": 0.5,
+  "NEAR_MISS_REARM": 0.3,
+  "N_CARS": {
+   "town": 12,
+   "street": 4,
+   "road": 0,
+   "room": 0,
+   "doorway": 0
+  },
+  "N_PEDS": {
+   "town": 30,
+   "street": 12,
+   "road": 3,
+   "room": 3,
+   "doorway": 3
+  },
+  "OBSTACLES": [
+   {
+    "type": "cylinder",
+    "center": [
+     -1.5,
+     1.5
+    ],
+    "radius": 0.4,
+    "height": 1.0,
+    "look": "plant"
+   },
+   {
+    "type": "cylinder",
+    "center": [
+     1.0,
+     -1.8
+    ],
+    "radius": 0.35,
+    "height": 1.0,
+    "look": "pillar"
+   },
+   {
+    "type": "box",
+    "center": [
+     1.0,
+     3.0
+    ],
+    "half_extents": [
+     0.6,
+     0.4
+    ],
+    "height": 0.75,
+    "look": "table"
+   },
+   {
+    "type": "box",
+    "center": [
+     -3.2,
+     -1.0
+    ],
+    "half_extents": [
+     0.4,
+     0.6
+    ],
+    "height": 0.9,
+    "look": "cabinet"
+   }
+  ],
+  "PARKED_CARS": true,
+  "PARKED_CAR_FILL": 0.65,
+  "PARKING_WIDTH": 2.0,
+  "PED_ARRIVE_PAUSE": [
+   2.0,
+   8.0
+  ],
+  "PED_AVOID_ROBOT": false,
+  "PED_AWARE_SHARE": 0.75,
+  "PED_CAR_REPULSION": 6.0,
+  "PED_COMFORT": 1.2,
+  "PED_GAP_ACCEPT": [
+   2.5,
+   5.0
+  ],
+  "PED_GOAL_TOLERANCE": 0.4,
+  "PED_GROUP_SIZES": {
+   "1": 0.6,
+   "2": 0.27,
+   "3": 0.1,
+   "4": 0.03
+  },
+  "PED_GROUP_SPACING": 0.75,
+  "PED_HEADING_NOISE": 0.08,
+  "PED_HEIGHT": 1.7,
+  "PED_HURRY": 1.35,
+  "PED_JAYWALKER_SHARE": 0.12,
+  "PED_JAYWALK_PROB": 0.5,
+  "PED_KERB_LOOK": [
+   0.3,
+   1.5
+  ],
+  "PED_KINDS": {
+   "adult": {
+    "share": 0.8,
+    "speed": [
+     1.05,
+     1.6
+    ],
+    "height": [
+     1.55,
+     1.92
+    ],
+    "radius": 0.25
+   },
+   "elderly": {
+    "share": 0.1,
+    "speed": [
+     0.65,
+     0.95
+    ],
+    "height": [
+     1.5,
+     1.8
+    ],
+    "radius": 0.25
+   },
+   "child": {
+    "share": 0.1,
+    "speed": [
+     0.9,
+     1.45
+    ],
+    "height": [
+     1.05,
+     1.4
+    ],
+    "radius": 0.2
+   }
+  },
+  "PED_LANE_WANDER": 0.6,
+  "PED_MARGIN": 0.5,
+  "PED_PAUSE_MAX": 3.0,
+  "PED_PAUSE_MIN": 1.0,
+  "PED_PAUSE_PROB": 0.005,
+  "PED_PAUSE_RATE": 0.02,
+  "PED_PAUSE_TIME": [
+   1.5,
+   6.0
+  ],
+  "PED_PHONE_SHARE": 0.15,
+  "PED_RADIUS": 0.25,
+  "PED_RED_LIGHT_PROB": 0.35,
+  "PED_RELAX_TIME": 0.5,
+  "PED_REPULSION_CUTOFF": 1.0,
+  "PED_REPULSION_RANGE": 0.3,
+  "PED_REPULSION_STRENGTH": 2.0,
+  "PED_SPAWN_CLEARANCE": 1.5,
+  "PED_SPEED_MAX": 1.5,
+  "PED_SPEED_MIN": 0.8,
+  "PED_SPEED_NOISE": 0.06,
+  "PED_TURN_BACK_PROB": 0.04,
+  "PERCEPTION_CAMERA_FORWARD": 0.5,
+  "PERCEPTION_FOV_DEG": 90.0,
+  "PERCEPTION_NEAR": 3.0,
+  "PERCEPTION_NOISE": 0.0,
+  "PERCEPTION_OCCLUDER_HEIGHT": 1.4,
+  "PERCEPTION_RANGE": 30.0,
+  "PERCEPTION_VEHICLE_RANGE": 40.0,
+  "PHYSICS_HZ": 100,
+  "PHYSICS_STEPS_PER_CONTROL": 10,
+  "PLAN_CORRIDOR": 12.0,
+  "PLAN_DT": 0.2,
+  "PLAN_HORIZON": 4.0,
+  "PLAN_LOOKAHEAD": [
+   2.5,
+   1.2
+  ],
+  "PLAN_OFFSETS": [
+   -6.0,
+   6.0,
+   0.5
+  ],
+  "PLAN_SHIFT_LENGTH": [
+   3.0,
+   2.5
+  ],
+  "PLAN_SPEEDS": [
+   1.0,
+   0.8,
+   0.6,
+   0.4,
+   0.2,
+   0.0
+  ],
+  "PREDICTION_HORIZON": 3.0,
+  "PREDICTION_STEP": 0.25,
+  "REAL_TIME_GUI": true,
+  "ROAD_CAR_GOAL": [
+   4.5,
+   -1.0
+  ],
+  "ROAD_CAR_START": [
+   -4.5,
+   -1.0
+  ],
+  "ROAD_OBSTACLES": [
+   {
+    "type": "cylinder",
+    "center": [
+     -2.0,
+     -2.3
+    ],
+    "radius": 0.15,
+    "look": "lamp"
+   },
+   {
+    "type": "cylinder",
+    "center": [
+     2.0,
+     2.3
+    ],
+    "radius": 0.15,
+    "look": "lamp"
+   },
+   {
+    "type": "cylinder",
+    "center": [
+     2.6,
+     -3.9
+    ],
+    "radius": 0.2,
+    "look": "tree"
+   },
+   {
+    "type": "cylinder",
+    "center": [
+     -3.2,
+     3.4
+    ],
+    "radius": 0.2,
+    "look": "tree"
+   },
+   {
+    "type": "box",
+    "center": [
+     -1.2,
+     4.3
+    ],
+    "half_extents": [
+     0.7,
+     0.25
+    ],
+    "height": 0.85,
+    "look": "bench"
+   }
+  ],
+  "ROAD_WIDTH": 4.0,
+  "ROBOT_HEIGHT": 0.3,
+  "ROBOT_MAX_ACCEL": 2.0,
+  "ROBOT_MAX_SPEED": 2.0,
+  "ROBOT_RADIUS": 0.3,
+  "ROBOT_START": [
+   -4.0,
+   -4.0
+  ],
+  "ROOM_SIZE": 10.0,
+  "SAFETY_MARGIN": 0.5,
+  "SCENARIO": "crossing",
+  "SEED": 0,
+  "SHOW_PED_TRAILS": false,
+  "SHOW_PLAN": true,
+  "SHOW_PLAN_EVERY": 5,
+  "SIDEWALK_WIDTH": 3.5,
+  "SIM_SPEED": 1.25,
+  "SPLIT_OF_20": "{'train': range(0, 14), 'val': range(14, 17), 'test': range(17, 20)}",
+  "STEER_MIN_RADIUS": 1.0,
+  "STEER_TIME": 0.4,
+  "STEER_YAW_ACCEL": 1.5,
+  "STOP_LINE_GAP": 1.0,
+  "STOP_ON_COLLISION": true,
+  "STREET_CROSSWALKS_X": [
+   -18.0,
+   2.0,
+   22.0
+  ],
+  "STREET_CROSSWALK_WIDTH": 3.0,
+  "STREET_CROSS_SIDES": [
+   "right",
+   "left",
+   "right"
+  ],
+  "STREET_CROSS_SPEED": 1.3,
+  "STREET_GOAL": [
+   36.0,
+   -1.5
+  ],
+  "STREET_LENGTH": 80.0,
+  "STREET_START": [
+   -36.0,
+   -1.5
+  ],
+  "TEXTURED_GROUND": true,
+  "TOWN_CROSSERS": [
+   {
+    "name": "P1",
+    "at": [
+     -50.0,
+     -4.5
+    ],
+    "side": "right",
+    "behaviour": "stop",
+    "contact": -0.5,
+    "expected": "swerve_left",
+    "zebra": false
+   },
+   {
+    "name": "P2",
+    "at": [
+     8.0,
+     -1.5
+    ],
+    "side": "right",
+    "behaviour": "cross",
+    "contact": 0.0,
+    "expected": "swerve_right",
+    "zebra": false
+   },
+   {
+    "name": "P3",
+    "at": [
+     30.0,
+     20.0
+    ],
+    "side": "left",
+    "behaviour": "cross",
+    "contact": 0.0,
+    "expected": "stop",
+    "zebra": true
+   },
+   {
+    "name": "P4",
+    "at": [
+     31.5,
+     42.0
+    ],
+    "side": "left",
+    "behaviour": "stop",
+    "contact": 0.5,
+    "expected": "swerve_right",
+    "zebra": false
+   },
+   {
+    "name": "P5",
+    "at": [
+     -6.0,
+     61.5
+    ],
+    "side": "random",
+    "behaviour": "random",
+    "contact": "random",
+    "expected": "decide",
+    "zebra": false
+   }
+  ],
+  "TOWN_CURVE_RADIUS": 12.0,
+  "TOWN_GOAL": [
+   -14.0,
+   61.5
+  ],
+  "TOWN_HALF_X": 70.0,
+  "TOWN_JUNCTIONS_X": [
+   -30.0,
+   30.0
+  ],
+  "TOWN_LIGHT_OFFSETS": [
+   0.0,
+   4.0
+  ],
+  "TOWN_LOOP_CROSSINGS": [
+   [
+    30.0,
+    20.0
+   ],
+   [
+    -30.0,
+    28.0
+   ]
+  ],
+  "TOWN_MIDBLOCK_X": [
+   -58.0,
+   52.0
+  ],
+  "TOWN_NORTH_Y": 60.0,
+  "TOWN_ROUTE": [
+   [
+    -66.0,
+    -4.5
+   ],
+   [
+    -20.0,
+    -4.5
+   ],
+   [
+    -6.0,
+    -1.5
+   ],
+   [
+    31.5,
+    25.0
+   ],
+   [
+    -14.0,
+    61.5
+   ]
+  ],
+  "TOWN_ROUTE_LANES": 2,
+  "TOWN_SOUTH_Y": -50.0,
+  "TOWN_START": [
+   -66.0,
+   -4.5
+  ],
+  "TRACK_FORGET": 1.0,
+  "TRACK_HISTORY": 3.0,
+  "TRAFFIC_ACCEL": 1.8,
+  "TRAFFIC_BRAKE": 3.0,
+  "TRAFFIC_BUS_SHARE": 0.08,
+  "TRAFFIC_DRIVER_SPREAD": 0.15,
+  "TRAFFIC_HEADWAY": 1.3,
+  "TRAFFIC_LIGHTS": true,
+  "TRAFFIC_LOOKAHEAD": 45.0,
+  "TRAFFIC_MAX_BRAKE": 7.0,
+  "TRAFFIC_MIN_GAP": 2.0,
+  "TRAFFIC_SPEED_MAIN": 8.0,
+  "TRAFFIC_SPEED_SIDE": 6.5,
+  "TRAFFIC_TURN_WEIGHTS": {
+   "straight": 0.5,
+   "right": 0.25,
+   "left": 0.25
+  },
+  "TRAFFIC_YIELD_ZEBRA": true,
+  "USE_BLENDER_MODELS": true,
+  "VEH_COMFORT": 1.2,
+  "VEH_MARGIN": 0.4,
+  "VELOCITY_STILL": 0.15,
+  "VELOCITY_WINDOW": 0.6,
+  "WALL_HEIGHT": 1.0,
+  "WALL_THICKNESS": 0.2,
+  "YIELD_ZONE": 2.0,
+  "YOLO_LABEL_CARS": false
+ }
+}

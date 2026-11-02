@@ -1,0 +1,176 @@
+Dataset run_data/v3: 120 runs, brains ['reactive', 'predictive', 'lstm'], dev seeds 20, eval seeds 20
+
+A. Main results, mean [95% bootstrap CI over seeds]
+  split  brain       runs  runs touching a person (%)  contacts per run   near misses per run  closest gap (m)       reached the goal (%)   
+  dev    reactive    20    65.00 [45.00, 85.00]        1.05 [0.65, 1.45]  1.25 [0.85, 1.70]    -0.27 [-0.57, 0.06]   100.00 [100.00, 100.00]
+  dev    predictive  20    0.00 [0.00, 0.00]           0.00 [0.00, 0.00]  0.15 [0.00, 0.30]    0.83 [0.71, 0.95]     100.00 [100.00, 100.00]
+  dev    lstm        20    5.00 [0.00, 15.00]          0.05 [0.00, 0.15]  0.15 [0.00, 0.30]    0.80 [0.64, 0.94]     95.00 [85.00, 100.00]  
+  eval   reactive    20    70.00 [50.00, 90.00]        0.95 [0.65, 1.30]  1.45 [1.20, 1.70]    -0.42 [-0.69, -0.12]  100.00 [100.00, 100.00]
+  eval   predictive  20    5.00 [0.00, 15.00]          0.05 [0.00, 0.15]  0.25 [0.05, 0.45]    0.65 [0.52, 0.78]     90.00 [75.00, 100.00]  
+  eval   lstm        20    0.00 [0.00, 0.00]           0.00 [0.00, 0.00]  0.10 [0.00, 0.25]    0.70 [0.59, 0.80]     95.00 [85.00, 100.00]  
+
+   Paired comparison on the SAME seeds (difference = second brain minus first; CI excludes 0 = a real difference):
+   eval predictive - reactive    contacts per run   -0.90 [-1.20, -0.60]   predictive better in 14, reactive better in 0, ties 6 -> CI excludes 0: yes
+   eval predictive - reactive    closest gap (m)    +1.08 [+0.75, +1.38]   predictive better in 17, reactive better in 3, ties 0 -> CI excludes 0: yes
+   eval lstm - reactive          contacts per run   -0.95 [-1.30, -0.65]   lstm better in 14, reactive better in 0, ties 6 -> CI excludes 0: yes
+   eval lstm - reactive          closest gap (m)    +1.12 [+0.81, +1.40]   lstm better in 20, reactive better in 0, ties 0 -> CI excludes 0: yes
+   eval lstm - predictive        contacts per run   -0.05 [-0.15, +0.00]   lstm better in 1, predictive better in 0, ties 19 -> CI excludes 0: no
+   eval lstm - predictive        closest gap (m)    +0.04 [-0.10, +0.18]   lstm better in 10, predictive better in 10, ties 0 -> CI excludes 0: no
+   all  predictive - reactive    contacts per run   -0.97 [-1.23, -0.72]   predictive better in 27, reactive better in 0, ties 13 -> CI excludes 0: yes
+   all  predictive - reactive    closest gap (m)    +1.09 [+0.88, +1.31]   predictive better in 35, reactive better in 5, ties 0 -> CI excludes 0: yes
+   all  lstm - reactive          contacts per run   -0.97 [-1.23, -0.72]   lstm better in 27, reactive better in 0, ties 13 -> CI excludes 0: yes
+   all  lstm - reactive          closest gap (m)    +1.09 [+0.88, +1.30]   lstm better in 38, reactive better in 2, ties 0 -> CI excludes 0: yes
+   all  lstm - predictive        contacts per run   +0.00 [-0.07, +0.07]   lstm better in 1, predictive better in 1, ties 38 -> CI excludes 0: no
+   all  lstm - predictive        closest gap (m)    +0.01 [-0.09, +0.11]   lstm better in 21, predictive better in 19, ties 0 -> CI excludes 0: no
+
+B. Scripted people (dev + eval pooled)
+  person  expected      brain       runs  correct %  contact %  mean closest gap (m)  actions                                              
+  P1      swerve_left   reactive    40    100.0      0.0        1.25                  swerve_left 40                                       
+  P1      swerve_left   predictive  40    95.0       0.0        1.03                  swerve_left 38, never reached 1, stop 1              
+  P1      swerve_left   lstm        40    100.0      0.0        1.0                   swerve_left 40                                       
+  P2      swerve_right  reactive    40    0.0        47.5       0.18                  stop 39, straight 1                                  
+  P2      swerve_right  predictive  40    32.5       0.0        2.69                  straight 23, swerve_right 13, stop 3, never reached 1
+  P2      swerve_right  lstm        40    27.5       0.0        1.19                  straight 27, swerve_right 11, stop 2                 
+  P3      stop          reactive    40    97.5       0.0        2.58                  stop 39, straight 1                                  
+  P3      stop          predictive  40    95.0       0.0        4.47                  stop 38, never reached 1, straight 1                 
+  P3      stop          lstm        40    92.5       0.0        2.71                  stop 37, straight 3                                  
+  P4      swerve_right  reactive    40    97.5       0.0        1.26                  swerve_right 39, stop 1                              
+  P4      swerve_right  predictive  40    95.0       0.0        3.22                  swerve_right 38, never reached 1, stop 1             
+  P4      swerve_right  lstm        40    100.0      0.0        1.4                   swerve_right 40                                      
+  P5      decide        reactive    40    -          45.0       0.15                  stop 25, swerve_right 13, straight 2                 
+  P5      decide        predictive  40    -          0.0        2.75                  straight 19, swerve_right 18, never reached 2, stop 1
+  P5      decide        lstm        40    -          2.5        0.93                  straight 17, swerve_right 12, stop 9, never reached 2
+
+C. By P5's random choice (dev + eval)
+  group                                 brain       runs  touch a person %  near misses/run  closest gap (m)  goal %  time (s)
+  P5 crosses, from the left             reactive    11    100.0             2.09             -0.86            100.0   116.3   
+  P5 crosses, from the left             predictive  11    0.0               0.27             0.69             100.0   115.6   
+  P5 crosses, from the left             lstm        11    0.0               0.09             0.75             100.0   114.7   
+  P5 crosses, from the right            reactive    14    57.1              1.29             -0.22            100.0   117.5   
+  P5 crosses, from the right            predictive  14    0.0               0.0              0.89             100.0   115.1   
+  P5 crosses, from the right            lstm        14    7.1               0.14             0.8              100.0   115.6   
+  P5 stops in the lane, from the left   reactive    5     60.0              1.2              -0.37            100.0   112.6   
+  P5 stops in the lane, from the left   predictive  5     20.0              0.6              0.34             60.0    147.6   
+  P5 stops in the lane, from the left   lstm        5     0.0               0.0              0.68             100.0   116.3   
+  P5 stops in the lane, from the right  reactive    10    50.0              0.7              0.06             100.0   120.9   
+  P5 stops in the lane, from the right  predictive  10    0.0               0.2              0.8              100.0   116.7   
+  P5 stops in the lane, from the right  lstm        10    0.0               0.2              0.71             80.0    133.9   
+
+D. Crossers stepping out earlier vs later than the median (timing jitter, dev + eval)
+  person  timing                                     brain       runs  contact %  mean closest gap (m)
+  P1      early (steps out sooner) (median -3.26 s)  reactive    20    0.0        1.24                
+  P1      late (median -3.26 s)                      reactive    20    0.0        1.25                
+  P1      early (steps out sooner) (median -3.26 s)  predictive  20    0.0        1.25                
+  P1      late (median -3.26 s)                      predictive  20    0.0        0.81                
+  P1      early (steps out sooner) (median -3.26 s)  lstm        20    0.0        1.12                
+  P1      late (median -3.26 s)                      lstm        20    0.0        0.88                
+  P2      early (steps out sooner) (median +0.29 s)  reactive    20    10.0       0.83                
+  P2      late (median +0.29 s)                      reactive    20    85.0       -0.48               
+  P2      early (steps out sooner) (median +0.29 s)  predictive  20    0.0        4.21                
+  P2      late (median +0.29 s)                      predictive  20    0.0        1.16                
+  P2      early (steps out sooner) (median +0.29 s)  lstm        20    0.0        1.32                
+  P2      late (median +0.29 s)                      lstm        20    0.0        1.06                
+  P3      early (steps out sooner) (median +0.12 s)  reactive    20    0.0        2.78                
+  P3      late (median +0.12 s)                      reactive    20    0.0        2.38                
+  P3      early (steps out sooner) (median +0.12 s)  predictive  20    0.0        6.57                
+  P3      late (median +0.12 s)                      predictive  20    0.0        2.38                
+  P3      early (steps out sooner) (median +0.12 s)  lstm        20    0.0        3.05                
+  P3      late (median +0.12 s)                      lstm        20    0.0        2.38                
+  P4      early (steps out sooner) (median -3.22 s)  reactive    20    0.0        1.26                
+  P4      late (median -3.22 s)                      reactive    20    0.0        1.25                
+  P4      early (steps out sooner) (median -3.22 s)  predictive  20    0.0        1.23                
+  P4      late (median -3.22 s)                      predictive  20    0.0        5.2                 
+  P4      early (steps out sooner) (median -3.22 s)  lstm        20    0.0        1.43                
+  P4      late (median -3.22 s)                      lstm        20    0.0        1.36                
+  P5      early (steps out sooner) (median -0.54 s)  reactive    20    5.0        0.96                
+  P5      late (median -0.54 s)                      reactive    20    85.0       -0.65               
+  P5      early (steps out sooner) (median -0.54 s)  predictive  20    0.0        4.51                
+  P5      late (median -0.54 s)                      predictive  20    0.0        0.99                
+  P5      early (steps out sooner) (median -0.54 s)  lstm        20    0.0        1.0                 
+  P5      late (median -0.54 s)                      lstm        20    5.0        0.85                
+
+E1. Quiet vs busy sidewalks (dev + eval)
+  group                             brain       runs  touch a person %  near misses/run  closest gap (m)  goal %  time (s)
+  busy sidewalks (people > 18.5)    reactive    20    75.0              1.4              -0.44            100.0   118.6   
+  busy sidewalks (people > 18.5)    predictive  20    0.0               0.15             0.78             100.0   116.4   
+  busy sidewalks (people > 18.5)    lstm        20    5.0               0.15             0.71             90.0    124.0   
+  quiet sidewalks (people <= 18.5)  reactive    20    60.0              1.3              -0.25            100.0   116.2   
+  quiet sidewalks (people <= 18.5)  predictive  20    5.0               0.25             0.71             90.0    123.0   
+  quiet sidewalks (people <= 18.5)  lstm        20    0.0               0.1              0.79             100.0   116.0   
+
+E2. Light vs heavy traffic (dev + eval)
+  group                      brain       runs  touch a person %  near misses/run  closest gap (m)  goal %  time (s)
+  heavy traffic (cars > 9)   reactive    15    53.3              1.13             -0.22            100.0   118.7   
+  heavy traffic (cars > 9)   predictive  15    6.7               0.2              0.77             100.0   116.4   
+  heavy traffic (cars > 9)   lstm        15    0.0               0.07             0.8              93.3    120.9   
+  light traffic (cars <= 9)  reactive    25    76.0              1.48             -0.42            100.0   116.6   
+  light traffic (cars <= 9)  predictive  25    0.0               0.2              0.73             92.0    121.7   
+  light traffic (cars <= 9)  lstm        25    4.0               0.16             0.72             96.0    119.4   
+
+   reading the per-step logs for F and G ...
+
+F. Background people by type (dev + eval): events per 100 s they spent within 3 m of the car
+  person type        brain       people  seconds within 3 m  contacts  near misses  contacts per 100 s close  near misses per 100 s close
+  NOT aware of cars  reactive    193     61.7                3         5            4.86                      8.1                        
+  NOT aware of cars  predictive  193     56.4                1         1            1.77                      1.77                       
+  NOT aware of cars  lstm        193     57.8                0         0            0.0                       0.0                        
+  aware of cars      reactive    520     112.3               0         0            0.0                       0.0                        
+  aware of cars      predictive  520     101.1               0         0            0.0                       0.0                        
+  aware of cars      lstm        520     99.8                0         0            0.0                       0.0                        
+  jaywalker          reactive    61      1.3                 0         0            0.0                       0.0                        
+  jaywalker          predictive  61      1.2                 0         0            0.0                       0.0                        
+  jaywalker          lstm        61      2.8                 0         0            0.0                       0.0                        
+  kind: adult        reactive    620     145.3               3         4            2.06                      2.75                       
+  kind: adult        predictive  620     127.6               1         1            0.78                      0.78                       
+  kind: adult        lstm        620     127.9               0         0            0.0                       0.0                        
+  kind: child        reactive    26      5.9                 0         0            0.0                       0.0                        
+  kind: child        predictive  26      5.0                 0         0            0.0                       0.0                        
+  kind: child        lstm        26      6.3                 0         0            0.0                       0.0                        
+  kind: elderly      reactive    67      22.8                0         1            0.0                       4.39                       
+  kind: elderly      predictive  67      24.9                0         0            0.0                       0.0                        
+  kind: elderly      lstm        67      23.4                0         0            0.0                       0.0                        
+  not a jaywalker    reactive    652     172.7               3         5            1.74                      2.9                        
+  not a jaywalker    predictive  652     156.3               1         1            0.64                      0.64                       
+  not a jaywalker    lstm        652     154.8               0         0            0.0                       0.0                        
+  not on the phone   reactive    618     143.0               3         5            2.1                       3.5                        
+  not on the phone   predictive  618     123.7               1         1            0.81                      0.81                       
+  not on the phone   lstm        618     127.3               0         0            0.0                       0.0                        
+  on the phone       reactive    95      31.0                0         0            0.0                       0.0                        
+  on the phone       predictive  95      33.8                0         0            0.0                       0.0                        
+  on the phone       lstm        95      30.3                0         0            0.0                       0.0                        
+
+G. Every run that touched a person or did not reach the goal
+  run               split  failure                                                                            person involved   aware of cars  gap (m)  when (s)
+  reactive_s0001    dev    touched a person                                                                   P2                yes            -0.91    38.4    
+  lstm_s0003        dev    timeout: last status 'stopped for a person' -> standoff with a person in the lane  P5                yes            0.736    200.0   
+  reactive_s0005    dev    touched a person                                                                   P5                yes            -1.043   108.4   
+  reactive_s0006    dev    touched a person                                                                   P5                yes            -0.903   113.6   
+  reactive_s0009    dev    touched a person                                                                   P2                yes            -1.099   38.3    
+  reactive_s0010    dev    touched a person                                                                   P5                yes            -1.032   125.6   
+  reactive_s0011    dev    touched a person                                                                   background adult  no             -0.336   58.4    
+  reactive_s0012    dev    touched a person                                                                   P2                yes            -0.396   38.5    
+  reactive_s0013    dev    touched a person                                                                   P2                yes            -0.324   42.1    
+  reactive_s0014    dev    touched a person                                                                   P2                yes            -1.043   38.3    
+  reactive_s0015    dev    touched a person                                                                   P5                yes            -0.497   117.0   
+  reactive_s0016    dev    touched a person                                                                   P5                yes            -1.0     120.6   
+  lstm_s0016        dev    touched a person                                                                   P5                yes            -0.052   121.0   
+  reactive_s0018    dev    touched a person                                                                   P2                yes            -0.259   38.3    
+  reactive_s0019    dev    touched a person                                                                   P2                yes            -0.765   38.5    
+  reactive_s2000    eval   touched a person                                                                   P5                yes            -0.785   113.4   
+  reactive_s2001    eval   touched a person                                                                   P2                yes            -1.081   38.7    
+  reactive_s2004    eval   touched a person                                                                   P5                yes            -0.921   108.9   
+  reactive_s2005    eval   touched a person                                                                   P5                yes            -1.078   107.5   
+  reactive_s2006    eval   touched a person                                                                   P5                yes            -0.271   117.1   
+  reactive_s2007    eval   touched a person                                                                   P5                yes            -0.809   113.3   
+  reactive_s2008    eval   touched a person                                                                   P5                yes            -0.999   108.3   
+  reactive_s2009    eval   touched a person                                                                   P2                yes            -0.309   38.4    
+  lstm_s2009        eval   timeout: last status 'emergency brake' -> standoff with a person in the lane       P5                yes            0.037    200.0   
+  reactive_s2010    eval   touched a person                                                                   P2                yes            -0.755   38.4    
+  predictive_s2013  eval   timeout: last status 'stopped for a person' -> standoff with a person in the lane  P1                yes            0.682    200.0   
+  reactive_s2014    eval   touched a person                                                                   P5                yes            -0.687   115.8   
+  reactive_s2015    eval   touched a person                                                                   P5                yes            -0.863   110.0   
+  reactive_s2016    eval   touched a person                                                                   P2                yes            -1.017   38.5    
+  reactive_s2017    eval   touched a person                                                                   P5                yes            -0.702   108.1   
+  reactive_s2018    eval   touched a person                                                                   P2                yes            -1.057   38.6    
+  predictive_s2018  eval   touched a person                                                                   background adult  no             -0.096   73.3    
+  predictive_s2019  eval   timeout: last status 'stopped for a person' -> standoff with a person in the lane  P5                yes            0.657    200.0   

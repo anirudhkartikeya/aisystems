@@ -1,0 +1,7 @@
+group,brain,runs,touch a person %,near misses/run,closest gap (m),goal %,time (s)
+heavy traffic (cars > 9),reactive,15,53.3,1.13,-0.22,100.0,118.7
+heavy traffic (cars > 9),predictive,15,6.7,0.2,0.77,100.0,116.4
+heavy traffic (cars > 9),lstm,15,0.0,0.07,0.8,93.3,120.9
+light traffic (cars <= 9),reactive,25,76.0,1.48,-0.42,100.0,116.6
+light traffic (cars <= 9),predictive,25,0.0,0.2,0.73,92.0,121.7
+light traffic (cars <= 9),lstm,25,4.0,0.16,0.72,96.0,119.4

@@ -1,0 +1,9 @@
+trajectories/
+dataset/
+*.csv.gz
+run_reports/
+_before_*/
+__pycache__/
+last.pt
+yolo11n.pt
+.DS_Store

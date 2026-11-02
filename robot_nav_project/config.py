@@ -327,13 +327,16 @@ PERCEPTION_VEHICLE_RANGE = 40.0  # m: other cars are sensed all around (mirrors 
 PERCEPTION_CAMERA_FORWARD = 0.5  # m: camera sits this far ahead of the car's centre
 PERCEPTION_OCCLUDER_HEIGHT = 1.4 # m: boxes at least this tall hide people (buildings, parked cars, shelters)
 PERCEPTION_NOISE = 0.0         # m: random error added to seen positions (0 = exact; try 0.1 for realism)
+PERCEPTION_MISS_RATE = 0.0     # share of camera sightings randomly lost, like a detector miss (stress tests)
+PERCEPTION_DELAY = 0.0         # s: the brain gets positions this old (camera + detector latency; stress tests)
 TRACK_HISTORY = 3.0            # s of past positions kept for each person
 TRACK_FORGET = 1.0             # s: forget a person not seen for this long
 
 # ---------------- Brains (brains.py) ----------------
-BRAIN = "predictive"           # run_sim.py default: "reactive", "predictive" or "none" (old placeholder driver)
+BRAIN = "predictive"           # run_sim.py default: "reactive", "predictive", "lstm" or "none" (old placeholder)
 PREDICTION_HORIZON = 3.0       # s: how far ahead the predictive brain looks (car at 2 m/s: 6 m)
 PREDICTION_STEP = 0.25         # s between predicted points
+LSTM_MODEL = "results/lstm_v2/lstm_v2.pt"   # the trained LSTM v2 (python train_lstm.py) for --brain lstm
 VELOCITY_WINDOW = 0.6          # s of history used to estimate a person's velocity
 VELOCITY_STILL = 0.15          # m/s: slower than this counts as standing still
 
@@ -357,6 +360,10 @@ COST_WAIT = 1.0                # extra per second already spent held up by a per
 COST_HARD_BRAKE = 1.0          # for braking hard instead of gently
 COMFORT_DECEL = 1.0            # m/s^2: gentle braking (hard braking uses the car's maximum, 2.0)
 COST_CHANGE = 0.5              # per metre of changing the plan (avoids zig-zag)
+# steering: the car turns like a car, not like a spinning top
+STEER_TIME = 0.4               # s: how quickly the steering closes the gap to the wanted direction
+STEER_MIN_RADIUS = 1.0         # m: tightest turn (so when nearly stopped it cannot spin its nose around)
+STEER_YAW_ACCEL = 1.5          # rad/s^2: how fast the steering can change (no instant left-right flicks)
 COST_PED_CLOSE = 8.0           # per metre inside PED_COMFORT
 COST_VEH_CLOSE = 3.0           # per metre inside VEH_COMFORT
 LEFT_TURN_HOLD = 2.0           # m: if it rolled over the line, it waits this far in (still straight in its lane)
@@ -370,7 +377,8 @@ INFLUENCE_RADIUS = 2.0
 
 # ---------------- Experiments ----------------
 SEED = 0
-NEAR_MISS_DIST = 0.5       # m, gap between robot and pedestrian surfaces
+NEAR_MISS_DIST = 0.5       # m: near miss = gap between the car's SURFACE and the person's SURFACE below this
+NEAR_MISS_REARM = 0.3      # m: the same person counts again only after the gap opened past 0.5 + 0.3 = 0.8 m
 HARD_BRAKE = 1.5           # m/s^2: braking harder than this counts as a hard brake (the car can do 2.0)
 STOP_ON_COLLISION = True   # end the trial at the first collision
 SHOW_PED_TRAILS = False    # GUI: short coloured trail behind every pedestrian

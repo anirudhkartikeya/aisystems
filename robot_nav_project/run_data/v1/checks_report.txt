@@ -1,0 +1,91 @@
+Dataset run_data/v1  (made 2026-11-01T17:05:21, code version 13c5e6408a96, brains ['reactive', 'predictive'])
+
+1. Files and versions
+  [PASS] every file in the manifest exists with the same SHA-256 - 8 files
+  [info] code files changed since the dataset was made: none
+  reading the per-step logs ...
+
+2. Counts
+  predictive  dev : 20 runs
+  predictive  eval: 10 runs
+  reactive    dev : 20 runs
+  reactive    eval: 10 runs
+  seeds: 30 | runs: 60 | robot steps: 70654 | person steps: 1587628 | vehicle steps: 550970
+  [PASS] each run's steps are 1..N with none missing or repeated, N = runs.csv steps
+  [PASS] every person is logged at every step
+  [PASS] every brain drove exactly the same seeds - 30 seeds each
+
+3. Dev / eval split (whole runs, fixed in split.csv before the runs)
+  [PASS] dev and eval seeds don't overlap - dev 0-19 (20), eval 1000-1009 (10)
+  [PASS] every run carries the split that split.csv gives its seed
+
+4. Finite values in every numeric field
+  [PASS] crossers.csv: reaction_gap - 6 NaN, 0 infinite of 300 (allowed: the car never reacted to a scripted person in that run)
+  [PASS] no unexpected NaN / infinite values anywhere - all numeric fields in all 7 files checked; min_ttc uses 99 = 'never closing in'
+
+5. Scenario variation over the seeds (scenarios.csv)
+  setting                       min      max  distinct
+  background_people          11.000   24.000        14
+  traffic_cars                4.000   12.000         9
+  PED_AWARE_SHARE             0.603    0.895        29
+  PED_PHONE_SHARE             0.058    0.250        30
+  PED_JAYWALKER_SHARE         0.000    0.246        30
+  PED_PAUSE_RATE              0.010    0.039        29
+  PED_TURN_BACK_PROB          0.002    0.079        29
+  CROSSING_TIMING_JITTER      1.000    1.000         1
+  CROSSING_SPEED_JITTER       0.200    0.200         1
+  P1_side                  {'right': 30}
+  P1_behaviour             {'stop': 30}
+  P1_contact_m               -0.500   -0.500         1
+  P1_timing_s                -3.967   -2.032        30
+  P1_speed_ms                 1.061    1.548        29
+  P2_side                  {'right': 30}
+  P2_behaviour             {'cross': 30}
+  P2_contact_m                0.000    0.000         1
+  P2_timing_s                -0.989    0.749        30
+  P2_speed_ms                 1.051    1.548        30
+  P3_side                  {'left': 30}
+  P3_behaviour             {'cross': 30}
+  P3_contact_m                0.000    0.000         1
+  P3_timing_s                -0.969    0.998        30
+  P3_speed_ms                 1.054    1.545        29
+  P4_side                  {'left': 30}
+  P4_behaviour             {'stop': 30}
+  P4_contact_m                0.500    0.500         1
+  P4_timing_s                -3.989   -2.185        29
+  P4_speed_ms                 1.041    1.552        30
+  P5_side                  {'right': 20, 'left': 10}
+  P5_behaviour             {'cross': 15, 'stop': 15}
+  P5_contact_m               -0.775    0.780        30
+  P5_timing_s                -3.960    0.970        30
+  P5_speed_ms                 1.050    1.552        29
+  P5 (side, behaviour) combinations: {('right', 'cross'): 10, ('left', 'cross'): 5, ('right', 'stop'): 10, ('left', 'stop'): 5}
+  [PASS] the varied settings really differ between seeds - 12 settings checked
+
+6. Duplicates
+  [PASS] no two seeds have the same scene (scene fingerprint) - 30 different scenes for 30 seeds
+  [PASS] for each seed, every brain got the SAME scene (a controlled comparison) - 30 seeds
+  [PASS] no two seeds start with identical people positions
+  [PASS] no two runs drove exactly the same path - 60 runs
+  [PASS] no repeated (run, step, person) rows in people_steps
+
+7. Metrics recomputed from the per-step logs
+  [PASS] surface gap recomputed from raw positions = logged gap - largest difference 0.14 mm (positions are saved to 0.1 mm)
+  [PASS] people contacts per run: logs = runs.csv - 60/60 runs match, total 22
+  [PASS] near misses per run: logs = runs.csv - 60/60 runs match, total 33
+  [PASS] each scripted person's closest gap: logs = crossers.csv - 300 people, largest difference 0.55 mm
+  [PASS] run min gap: logs (every 0.1 s) vs runs.csv (every 0.01 s) - logs are never smaller (as expected); mean difference 0.4 cm, largest 7.9 cm - the simulator also checks between the 0.1 s steps
+
+8. Reactive vs predictive, computed from the per-step logs only
+
+  DEV seeds
+  brain        runs  reached goal  runs hitting a person  contacts  near misses/run  min gap (m)  time (s)
+  reactive       20          100%                    65%        21             1.25        -0.26     118.6
+  predictive     20          100%                     0%         0             0.15         0.84     116.0
+
+  EVAL seeds
+  brain        runs  reached goal  runs hitting a person  contacts  near misses/run  min gap (m)  time (s)
+  reactive       10          100%                    10%         1             0.40         0.69     116.0
+  predictive     10           90%                     0%         0             0.10         0.74     121.2
+
+19/19 checks passed

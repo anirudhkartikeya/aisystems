@@ -23,6 +23,7 @@ import numpy as np
 import pybullet as p
 
 import config
+from metrics import surface_gap
 from pedestrians import keep_out_of_cars, separate_pedestrians
 from robot import Robot
 from scenarios import make_pedestrians, n_cars, start_and_goal
@@ -265,7 +266,7 @@ class Simulation:
         for ped in self.peds:
             if abs(ped.x - rx) > 6 or abs(ped.y - ry) > 6:
                 continue
-            gap = min(math.hypot(cx - ped.x, cy - ped.y) - cr for cx, cy, cr in footprint) - ped.radius
+            gap = surface_gap(footprint, ped.x, ped.y, ped.radius)
             self.min_gap = min(self.min_gap, gap)
             if gap < 0:
                 if ped.ped_id not in self._touching:     # count each contact once
@@ -321,7 +322,7 @@ class Simulation:
         foot = self.robot.footprint()
         for log in self.crosser_log:
             ped = by_id[log["ped_id"]]
-            gap = min(math.hypot(cx - ped.x, cy - ped.y) - cr for cx, cy, cr in foot) - ped.radius
+            gap = surface_gap(foot, ped.x, ped.y, ped.radius)
             log["min_gap"] = min(log["min_gap"], gap)
             if log["action"] is not None or ped.path is None:
                 continue

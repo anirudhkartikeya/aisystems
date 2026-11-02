@@ -1,0 +1,33 @@
+Run lstm_s2009 from run_data/v3: brain lstm, seed 2009 (eval), 2000 steps, saved result: timeout, near misses 1, contacts 0
+Saved settings for this seed: 22 background people, 9 cars, P5 right/stop, scene fingerprint 19d1d8a61db424b3
+
+A. Reproduce the run from its saved settings
+  code files changed since the dataset was made: none
+  varied settings re-derived from the seed = saved scenarios.csv row: YES
+  scene fingerprint: saved 19d1d8a61db424b3, re-run 19d1d8a61db424b3 -> SAME
+  steps: saved 2000, re-run 2000
+  largest difference, car position over all steps: 0.00 mm
+  largest difference, any person over all steps:   0.00 mm  (log precision 0.1 mm)
+  result           saved  timeout   re-run  timeout   same
+  near_misses      saved        1   re-run        1   same
+  ped_collisions   saved        0   re-run        0   same
+  min_gap          saved    0.037   re-run    0.037   same
+  correct_actions  saved        4   re-run        4   same
+  -> REPRODUCED exactly
+
+B. Near misses recounted from the saved trajectory log (own arithmetic, written rule)
+  car circles: radius 0.90 m at -1.00, 0, +1.00 m along the heading; near miss < 0.5 m, re-armed above 0.8 m
+
+  event      person              starts at  closest gap       at  car speed
+  near miss  P5                     115.3s       0.037m   117.4s     0.00m/s
+
+  recounted from the log: near misses 1, contacts 0
+  saved in runs.csv:      near misses 1, contacts 0
+  -> MATCH
+
+  Check one near miss by hand (its closest moment, t = 117.4 s):
+    car centre (-3.8648, 60.5116), heading -3.1237 rad; person (-6.0000, 60.1471), radius 0.25 m
+    rear   circle centre (-2.8650, 60.5295): distance 3.1583 m -> gap 3.1583 - 0.90 - 0.25 = 2.008 m
+    middle circle centre (-3.8648, 60.5116): distance 2.1661 m -> gap 2.1661 - 0.90 - 0.25 = 1.016 m
+    front  circle centre (-4.8646, 60.4937): distance 1.1871 m -> gap 1.1871 - 0.90 - 0.25 = 0.037 m
+    smallest = 0.037 m < 0.5 m -> near miss

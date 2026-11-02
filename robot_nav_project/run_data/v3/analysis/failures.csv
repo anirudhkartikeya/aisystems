@@ -1,0 +1,34 @@
+run,split,failure,person involved,aware of cars,gap (m),when (s)
+reactive_s0001,dev,touched a person,P2,yes,-0.91,38.4
+lstm_s0003,dev,timeout: last status 'stopped for a person' -> standoff with a person in the lane,P5,yes,0.736,200.0
+reactive_s0005,dev,touched a person,P5,yes,-1.043,108.4
+reactive_s0006,dev,touched a person,P5,yes,-0.903,113.6
+reactive_s0009,dev,touched a person,P2,yes,-1.099,38.3
+reactive_s0010,dev,touched a person,P5,yes,-1.032,125.6
+reactive_s0011,dev,touched a person,background adult,no,-0.336,58.4
+reactive_s0012,dev,touched a person,P2,yes,-0.396,38.5
+reactive_s0013,dev,touched a person,P2,yes,-0.324,42.1
+reactive_s0014,dev,touched a person,P2,yes,-1.043,38.3
+reactive_s0015,dev,touched a person,P5,yes,-0.497,117.0
+reactive_s0016,dev,touched a person,P5,yes,-1.0,120.6
+lstm_s0016,dev,touched a person,P5,yes,-0.052,121.0
+reactive_s0018,dev,touched a person,P2,yes,-0.259,38.3
+reactive_s0019,dev,touched a person,P2,yes,-0.765,38.5
+reactive_s2000,eval,touched a person,P5,yes,-0.785,113.4
+reactive_s2001,eval,touched a person,P2,yes,-1.081,38.7
+reactive_s2004,eval,touched a person,P5,yes,-0.921,108.9
+reactive_s2005,eval,touched a person,P5,yes,-1.078,107.5
+reactive_s2006,eval,touched a person,P5,yes,-0.271,117.1
+reactive_s2007,eval,touched a person,P5,yes,-0.809,113.3
+reactive_s2008,eval,touched a person,P5,yes,-0.999,108.3
+reactive_s2009,eval,touched a person,P2,yes,-0.309,38.4
+lstm_s2009,eval,timeout: last status 'emergency brake' -> standoff with a person in the lane,P5,yes,0.037,200.0
+reactive_s2010,eval,touched a person,P2,yes,-0.755,38.4
+predictive_s2013,eval,timeout: last status 'stopped for a person' -> standoff with a person in the lane,P1,yes,0.682,200.0
+reactive_s2014,eval,touched a person,P5,yes,-0.687,115.8
+reactive_s2015,eval,touched a person,P5,yes,-0.863,110.0
+reactive_s2016,eval,touched a person,P2,yes,-1.017,38.5
+reactive_s2017,eval,touched a person,P5,yes,-0.702,108.1
+reactive_s2018,eval,touched a person,P2,yes,-1.057,38.6
+predictive_s2018,eval,touched a person,background adult,no,-0.096,73.3
+predictive_s2019,eval,timeout: last status 'stopped for a person' -> standoff with a person in the lane,P5,yes,0.657,200.0

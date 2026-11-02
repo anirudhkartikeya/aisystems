@@ -1,0 +1,7 @@
+group,all,spread_m,changes,onto road,car<10m,children,elderly
+movement history (own past steps),0.8309,0.004,0.8897,0.656,0.8456,0.9026,0.8202
+"road (kerb, direction to road, on road)",0.4754,0.0065,0.2864,0.945,0.5209,0.5022,0.4107
+"crossing (where, light, walk signal, on it)",0.3439,0.0032,0.2004,0.3206,0.3186,0.4042,0.2606
+nearby people (3 nearest + crowd),0.1668,0.0024,0.1347,0.1604,0.155,0.2342,0.1722
+nearest car,0.0178,0.0007,0.0187,0.0311,0.0225,0.0298,0.0118
+robot car,0.0162,0.0011,0.0063,0.0181,0.0139,0.0285,0.014

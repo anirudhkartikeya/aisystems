@@ -1,0 +1,25 @@
+group,found,people,recall
+ALL,818,1029,0.795
+camera: robot,162,200,0.81
+camera: traffic,656,829,0.791
+crowd: crowded (6+ people),300,392,0.765
+crowd: not crowded (<6 people),518,637,0.813
+edge: cut off at picture edge,41,52,0.788
+edge: fully in picture,777,977,0.795
+lighting: dusk,134,160,0.838
+lighting: evening,39,46,0.848
+lighting: morning,241,313,0.77
+lighting: noon,297,379,0.784
+lighting: overcast,107,131,0.817
+place: street,260,315,0.825
+place: town,558,714,0.782
+"size: 1 tiny (very far, <3% of picture height)",13,45,0.289
+"size: 2 small (far, 3-6%)",239,353,0.677
+size: 3 medium (6-15%),434,486,0.893
+"size: 4 large (close, >15%)",132,145,0.91
+precision / lighting: ALL,818,944,0.867
+precision / lighting: dusk,134,156,0.859
+precision / lighting: evening,39,42,0.929
+precision / lighting: morning,241,283,0.852
+precision / lighting: noon,297,342,0.868
+precision / lighting: overcast,107,121,0.884

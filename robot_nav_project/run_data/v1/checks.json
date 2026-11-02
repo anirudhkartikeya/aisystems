@@ -1,0 +1,139 @@
+{
+ "dataset": "run_data/v1",
+ "code_version": "13c5e6408a96",
+ "checks": [
+  {
+   "check": "every file in the manifest exists with the same SHA-256",
+   "ok": true,
+   "detail": "8 files"
+  },
+  {
+   "check": "each run's steps are 1..N with none missing or repeated, N = runs.csv steps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "every person is logged at every step",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "every brain drove exactly the same seeds",
+   "ok": true,
+   "detail": "30 seeds each"
+  },
+  {
+   "check": "dev and eval seeds don't overlap",
+   "ok": true,
+   "detail": "dev 0-19 (20), eval 1000-1009 (10)"
+  },
+  {
+   "check": "every run carries the split that split.csv gives its seed",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "crossers.csv: reaction_gap",
+   "ok": true,
+   "detail": "6 NaN, 0 infinite of 300 (allowed: the car never reacted to a scripted person in that run)"
+  },
+  {
+   "check": "no unexpected NaN / infinite values anywhere",
+   "ok": true,
+   "detail": "all numeric fields in all 7 files checked; min_ttc uses 99 = 'never closing in'"
+  },
+  {
+   "check": "the varied settings really differ between seeds",
+   "ok": true,
+   "detail": "12 settings checked"
+  },
+  {
+   "check": "no two seeds have the same scene (scene fingerprint)",
+   "ok": true,
+   "detail": "30 different scenes for 30 seeds"
+  },
+  {
+   "check": "for each seed, every brain got the SAME scene (a controlled comparison)",
+   "ok": true,
+   "detail": "30 seeds"
+  },
+  {
+   "check": "no two seeds start with identical people positions",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "no two runs drove exactly the same path",
+   "ok": true,
+   "detail": "60 runs"
+  },
+  {
+   "check": "no repeated (run, step, person) rows in people_steps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "surface gap recomputed from raw positions = logged gap",
+   "ok": true,
+   "detail": "largest difference 0.14 mm (positions are saved to 0.1 mm)"
+  },
+  {
+   "check": "people contacts per run: logs = runs.csv",
+   "ok": true,
+   "detail": "60/60 runs match, total 22"
+  },
+  {
+   "check": "near misses per run: logs = runs.csv",
+   "ok": true,
+   "detail": "60/60 runs match, total 33"
+  },
+  {
+   "check": "each scripted person's closest gap: logs = crossers.csv",
+   "ok": true,
+   "detail": "300 people, largest difference 0.55 mm"
+  },
+  {
+   "check": "run min gap: logs (every 0.1 s) vs runs.csv (every 0.01 s)",
+   "ok": true,
+   "detail": "logs are never smaller (as expected); mean difference 0.4 cm, largest 7.9 cm - the simulator also checks between the 0.1 s steps"
+  }
+ ],
+ "table_from_logs": {
+  "dev/reactive": {
+   "runs": 20,
+   "reached_goal_pct": 100.0,
+   "runs_hitting_person_pct": 65.0,
+   "contacts": 21,
+   "near_misses_per_run": 1.25,
+   "min_gap_m": -0.2617644449529003,
+   "time_s": 118.57099999999998
+  },
+  "dev/predictive": {
+   "runs": 20,
+   "reached_goal_pct": 100.0,
+   "runs_hitting_person_pct": 0.0,
+   "contacts": 0,
+   "near_misses_per_run": 0.15,
+   "min_gap_m": 0.8366125165059944,
+   "time_s": 115.96499999999999
+  },
+  "eval/reactive": {
+   "runs": 10,
+   "reached_goal_pct": 100.0,
+   "runs_hitting_person_pct": 10.0,
+   "contacts": 1,
+   "near_misses_per_run": 0.4,
+   "min_gap_m": 0.6945759310383524,
+   "time_s": 115.98600000000002
+  },
+  "eval/predictive": {
+   "runs": 10,
+   "reached_goal_pct": 90.0,
+   "runs_hitting_person_pct": 0.0,
+   "contacts": 0,
+   "near_misses_per_run": 0.1,
+   "min_gap_m": 0.7367430230718777,
+   "time_s": 121.231
+  }
+ }
+}

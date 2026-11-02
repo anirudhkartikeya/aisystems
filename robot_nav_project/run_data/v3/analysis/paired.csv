@@ -1,0 +1,37 @@
+split,comparison,metric,seeds,mean difference [95% CI],seeds second better,seeds first better,ties,CI excludes 0
+dev,predictive - reactive,contacts per run,20,"-1.05 [-1.45, -0.65]",13,0,7,yes
+dev,predictive - reactive,near misses per run,20,"-1.10 [-1.60, -0.65]",13,0,7,yes
+dev,predictive - reactive,closest gap (m),20,"+1.09 [+0.79, +1.38]",18,2,0,yes
+dev,predictive - reactive,time (s),20,"-2.60 [-5.29, -0.64]",15,4,1,yes
+dev,lstm - reactive,contacts per run,20,"-1.00 [-1.40, -0.65]",13,0,7,yes
+dev,lstm - reactive,near misses per run,20,"-1.10 [-1.55, -0.65]",15,1,4,yes
+dev,lstm - reactive,closest gap (m),20,"+1.07 [+0.76, +1.36]",18,2,0,yes
+dev,lstm - reactive,time (s),20,"+0.68 [-4.27, +7.25]",14,5,1,no
+dev,lstm - predictive,contacts per run,20,"+0.05 [+0.00, +0.15]",0,1,19,no
+dev,lstm - predictive,near misses per run,20,"+0.00 [-0.25, +0.25]",3,3,14,no
+dev,lstm - predictive,closest gap (m),20,"-0.03 [-0.16, +0.11]",11,9,0,no
+dev,lstm - predictive,time (s),20,"+3.28 [-0.82, +9.31]",5,14,1,no
+eval,predictive - reactive,contacts per run,20,"-0.90 [-1.20, -0.60]",14,0,6,yes
+eval,predictive - reactive,near misses per run,20,"-1.20 [-1.50, -0.90]",17,0,3,yes
+eval,predictive - reactive,closest gap (m),20,"+1.08 [+0.75, +1.38]",17,3,0,yes
+eval,predictive - reactive,time (s),20,"+7.22 [-2.58, +21.08]",15,5,0,no
+eval,lstm - reactive,contacts per run,20,"-0.95 [-1.30, -0.65]",14,0,6,yes
+eval,lstm - reactive,near misses per run,20,"-1.35 [-1.65, -1.05]",18,0,2,yes
+eval,lstm - reactive,closest gap (m),20,"+1.12 [+0.81, +1.40]",20,0,0,yes
+eval,lstm - reactive,time (s),20,"+4.55 [-1.40, +14.45]",13,7,0,no
+eval,lstm - predictive,contacts per run,20,"-0.05 [-0.15, +0.00]",1,0,19,no
+eval,lstm - predictive,near misses per run,20,"-0.15 [-0.40, +0.10]",5,2,13,no
+eval,lstm - predictive,closest gap (m),20,"+0.04 [-0.10, +0.18]",10,10,0,no
+eval,lstm - predictive,time (s),20,"-2.67 [-15.56, +10.76]",8,10,2,no
+all,predictive - reactive,contacts per run,40,"-0.97 [-1.23, -0.72]",27,0,13,yes
+all,predictive - reactive,near misses per run,40,"-1.15 [-1.43, -0.88]",30,0,10,yes
+all,predictive - reactive,closest gap (m),40,"+1.09 [+0.88, +1.31]",35,5,0,yes
+all,predictive - reactive,time (s),40,"+2.31 [-2.90, +9.29]",30,9,1,no
+all,lstm - reactive,contacts per run,40,"-0.97 [-1.23, -0.72]",27,0,13,yes
+all,lstm - reactive,near misses per run,40,"-1.23 [-1.50, -0.97]",33,1,6,yes
+all,lstm - reactive,closest gap (m),40,"+1.09 [+0.88, +1.30]",38,2,0,yes
+all,lstm - reactive,time (s),40,"+2.61 [-1.83, +8.85]",27,12,1,no
+all,lstm - predictive,contacts per run,40,"+0.00 [-0.07, +0.07]",1,1,38,no
+all,lstm - predictive,near misses per run,40,"-0.07 [-0.25, +0.10]",8,5,27,no
+all,lstm - predictive,closest gap (m),40,"+0.01 [-0.09, +0.11]",21,19,0,no
+all,lstm - predictive,time (s),40,"+0.30 [-7.18, +7.93]",13,24,3,no

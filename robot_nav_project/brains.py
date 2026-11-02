@@ -9,7 +9,8 @@ the car drives comes only from these predictions.
     reactive    - people stay where they were last seen (no prediction)
     predictive  - people keep walking at their current velocity for
                   PREDICTION_HORIZON seconds (constant-velocity model)
-    lstm        - Phase 2: a trained LSTM predicts the next positions (slot ready)
+    lstm        - the trained LSTM v2 (train_lstm.py): 3.2 s ahead, using the person's
+                  last 2.8 s plus context (kerb, crossings and lights, cars, nearby people)
 
 After a brain's last time the planner assumes the person keeps the last predicted motion
 (for the reactive brain: stays put).
@@ -109,24 +110,130 @@ class PredictiveBrain(Brain):
 
 
 class LSTMBrain(Brain):
-    """Phase 2 slot. To plug the trained LSTM in:
-      1. load the model in __init__ (e.g. torch.load("lstm.pt")),
-      2. in predict: for each track, resample its history to the time step the
-         LSTM was trained on (make_data.py saves every 0.4 s), feed it, and
-         turn the predicted offsets into positions,
-      3. return Prediction(track.id, track.radius, times, xy) like the others.
-    Nothing else in the project has to change."""
+    """The trained LSTM (train_lstm.py -> results/lstm_v2/lstm_v2.pt).
+
+    For every person the car sees, it takes their last 2.8 s (resampled to one point
+    every 0.4 s, like the training data), adds the same context the model was trained
+    with (lstm_features.py: kerb, nearest crossing and its light, nearest car and the
+    robot car, the 3 nearest people the car can see) and predicts their next 3.2 s as a
+    correction to constant velocity. People seen for less than 2.8 s get the
+    constant-velocity prediction until there is enough history.
+    """
     name = "lstm"
 
-    def __init__(self, model_path=None):
-        raise NotImplementedError("The LSTM brain comes in Phase 2 - train the LSTM first.")
+    def __init__(self, sim=None, model_path=None):
+        import torch
+        import torch.nn as nn
+        import lstm_features as lf
+        from roadmap import RoadMap
+        if sim is None:
+            raise ValueError("The LSTM brain needs the simulation (make_brain('lstm', sim)).")
+        self.torch, self.lf, self.sim = torch, lf, sim
+        path = model_path or config.LSTM_MODEL
+        ck = torch.load(path, map_location="cpu", weights_only=False)
+        self.obs, self.pred, self.dt = int(ck["obs"]), int(ck["pred"]), float(ck["dt"])
+        self.scale = float(ck["scale"])
+        self.ctx_mean = np.asarray(ck["ctx_mean"], dtype=np.float32)
+        self.ctx_std = np.asarray(ck["ctx_std"], dtype=np.float32)
+        pred, scale = self.pred, self.scale
+
+        class Predictor(nn.Module):                         # the same network as in train_lstm.py
+            def __init__(self, n_in, hidden):
+                super().__init__()
+                self.lstm = nn.LSTM(n_in, hidden, num_layers=1, batch_first=True)
+                self.head = nn.Sequential(nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, pred * 2))
+
+            def forward(self, x, cv):
+                _, (h, _) = self.lstm(x)
+                return cv + torch.cumsum(self.head(h[-1]).view(-1, pred, 2), dim=1) * scale
+
+        self.model = Predictor(int(ck["n_in"]), int(ck["hidden"]))
+        self.model.load_state_dict(ck["state_dict"])
+        self.model.eval()
+        self.roadmap = RoadMap(sim.world.layout)           # own copy: its lights can be "looked up" in the past
+        self.horizon = self.pred * self.dt
+        self.times = np.arange(0, self.pred + 1) * self.dt
+        self.fallback = PredictiveBrain(horizon=self.horizon, step=self.dt)
+        self.frames = []                                     # what the car saw at each recent step
+
+    def reset(self):
+        self.frames = []
+
+    # ---------- what the car saw a moment ago (for the people / cars context) ----------
+    def _remember(self, tracks, now):
+        sim = self.sim
+        ids = list(tracks)
+        p_xy = np.array([tracks[i].position for i in ids], dtype=float).reshape(-1, 2)
+        p_v = np.array([estimate_velocity(tracks[i]) for i in ids], dtype=float).reshape(-1, 2)
+        cars = [v for v in (sim.traffic.vehicles if sim.traffic else []) if v.active]
+        c_xy = [(v.x, v.y) for v in cars]
+        c_v = [(v.v * math.cos(v.heading), v.v * math.sin(v.heading)) for v in cars]
+        r = sim.robot
+        c_xy.append((r.x, r.y))
+        c_v.append((r.vx, r.vy))
+        robot_mask = np.zeros(len(c_xy), dtype=bool)
+        robot_mask[-1] = True
+        self.frames.append((now, ids, p_xy, p_v, np.array(c_xy, float), np.array(c_v, float), robot_mask))
+        horizon = self.obs * self.dt + 0.5
+        while self.frames and now - self.frames[0][0] > horizon:
+            self.frames.pop(0)
+
+    def _frame_at(self, t):
+        return min(self.frames, key=lambda f: abs(f[0] - t))
 
     def predict(self, tracks, now):
-        raise NotImplementedError
+        self._remember(tracks, now)
+        span = (self.obs - 1) * self.dt
+        ready, out = [], []
+        for tr in tracks.values():
+            hist = tr.history
+            if hist[-1][0] - hist[0][0] >= span - 1e-6:
+                ready.append(tr)
+            else:                                            # not enough history yet
+                out += self.fallback.predict({tr.id: tr}, now)
+        if not ready:
+            return out
+        lf = self.lf
+        X, CV, last_pts, lags, all_pts, all_t = [], [], [], [], [], []
+        ctx_rows = []
+        for tr in ready:
+            h = np.array(tr.history, dtype=float)
+            t_last = h[-1, 0]
+            tk = t_last - (self.obs - 1 - np.arange(self.obs)) * self.dt          # 0.4 s apart, ending now
+            pts = np.stack([np.interp(tk, h[:, 0], h[:, 1]), np.interp(tk, h[:, 0], h[:, 2])], axis=1)
+            steps = np.diff(pts, axis=0)                                           # (obs-1, 2)
+            X.append(steps / self.scale)
+            CV.append(steps[-1][None, :] * np.arange(1, self.pred + 1)[:, None])
+            last_pts.append(pts[-1])
+            lags.append(max(0.0, now - t_last))
+            all_pts.append(pts[1:]); all_t.append(tk[1:])
+            # people / cars context at each of those moments
+            rows = []
+            for k in range(1, self.obs):
+                f_t, ids, p_xy, p_v, c_xy, c_v, rmask = self._frame_at(tk[k])
+                others = [j for j, pid in enumerate(ids) if pid != tr.id]
+                me_v = steps[k - 1] / self.dt
+                P = np.vstack([pts[k][None, :], p_xy[others]]) if others else pts[k][None, :]
+                V = np.vstack([me_v[None, :], p_v[others]]) if others else me_v[None, :]
+                rows.append(lf.frame_features(P, V, c_xy, c_v, rmask)[0])
+            ctx_rows.append(np.array(rows))
+        n = len(ready)
+        mapf = lf.map_features(self.roadmap, np.concatenate(all_pts), np.concatenate(all_t))
+        ctx = np.concatenate([mapf.reshape(n, self.obs - 1, 10), np.stack(ctx_rows)], axis=2)
+        ctx = (ctx - self.ctx_mean) / self.ctx_std
+        x = np.concatenate([np.stack(X), ctx], axis=2).astype(np.float32)
+        cv = np.stack(CV).astype(np.float32)
+        with self.torch.no_grad():
+            offsets = self.model(self.torch.from_numpy(x), self.torch.from_numpy(cv)).numpy()   # (n, pred, 2)
+        for tr, off, p0, lag in zip(ready, offsets, last_pts, lags):
+            xy = np.vstack([p0[None, :], p0[None, :] + off])
+            vel = tuple((off[0] / self.dt).tolist())
+            out.append(Prediction(tr.id, tr.radius, self.times - lag, xy, vel))
+        return out
 
 
 BRAINS = {"reactive": ReactiveBrain, "predictive": PredictiveBrain, "lstm": LSTMBrain}
 
 
-def make_brain(name):
-    return BRAINS[name]()
+def make_brain(name, sim=None):
+    return BRAINS[name](sim) if name == "lstm" else BRAINS[name]()

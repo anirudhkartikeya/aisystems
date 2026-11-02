@@ -1,0 +1,7 @@
+group,brain,runs,touch a person %,near misses/run,closest gap (m),goal %,time (s)
+busy sidewalks (people > 18.5),reactive,20,75.0,1.4,-0.44,100.0,118.6
+busy sidewalks (people > 18.5),predictive,20,0.0,0.15,0.78,100.0,116.4
+busy sidewalks (people > 18.5),lstm,20,5.0,0.15,0.71,90.0,124.0
+quiet sidewalks (people <= 18.5),reactive,20,60.0,1.3,-0.25,100.0,116.2
+quiet sidewalks (people <= 18.5),predictive,20,5.0,0.25,0.71,90.0,123.0
+quiet sidewalks (people <= 18.5),lstm,20,0.0,0.1,0.79,100.0,116.0

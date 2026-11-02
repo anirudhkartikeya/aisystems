@@ -223,11 +223,13 @@ class Planner:
         self._lt = None
         self.lanes = LaneGrid(self.sim.world.roadmap, self.frame)
         self.d_target = 0.0
+        self.yaw_rate = 0.0                 # rad/s, the steering state (changes smoothly)
         self.status = "driving"
         self.reacting_to = None
         self.chosen_xy = None
         self.s, self.d = self.frame.project(self.sim.robot.x, self.sim.robot.y)
         self._crossings = self._crossings_on_route()
+        self._first = True                  # the very first step may point the car the right way
 
     def _crossings_on_route(self):
         """Painted crossings the route goes over: (s along the route, crossing)."""
@@ -560,7 +562,22 @@ class Planner:
         n = math.hypot(hx, hy)
         hx, hy = (hx / n, hy / n) if n > 1e-6 else (math.cos(r.heading), math.sin(r.heading))
         v_cmd = float(np.interp(config.CONTROL_DT, T, v[si]))   # the planned speed one step from now
-        return hx * v_cmd, hy * v_cmd
+        # steer towards that point like a real steering wheel: the turn rate follows the heading
+        # error smoothly (STEER_TIME), changes at most STEER_YAW_ACCEL per second (no instant
+        # left-right flicks) and is never tighter than STEER_MIN_RADIUS (no spinning on the spot)
+        dt = config.CONTROL_DT
+        err = _wrap(math.atan2(hy, hx) - r.heading) if n > 1e-6 else 0.0
+        if self._first:                     # standing at the start: just point the car the right way
+            self._first = v_cmd < 0.05
+            return hx * v_cmd, hy * v_cmd
+        v_now = max(v0, v_cmd)
+        want = err / config.STEER_TIME
+        step = config.STEER_YAW_ACCEL * dt
+        self.yaw_rate += min(step, max(-step, want - self.yaw_rate))
+        lim = v_now / config.STEER_MIN_RADIUS
+        self.yaw_rate = min(lim, max(-lim, self.yaw_rate))
+        h = r.heading + self.yaw_rate * dt
+        return math.cos(h) * v_cmd, math.sin(h) * v_cmd
 
 
 # ======================================================================= the driver
@@ -571,7 +588,7 @@ class Driver:
         if sim.world.roadmap is None:
             raise ValueError("The planner drives the car on the street and town layouts.")
         self.sim = sim
-        self.brain = make_brain(brain) if isinstance(brain, str) else brain
+        self.brain = make_brain(brain, sim) if isinstance(brain, str) else brain
         self.perception = Perception(sim)
         self.planner = Planner(sim)
         self.predictions = []
@@ -580,6 +597,8 @@ class Driver:
     def reset(self):
         sim = self.sim
         self.perception.reset()
+        if hasattr(self.brain, "reset"):
+            self.brain.reset()
         self.planner.reset(sim.world.route(sim.start, sim.goal), start=(sim.robot.x, sim.robot.y))
         self.predictions = []
         self._lines = []

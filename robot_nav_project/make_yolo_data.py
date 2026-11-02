@@ -1,6 +1,6 @@
 """make_yolo_data.py - generate labelled camera images to train YOLO.
 
-    python make_yolo_data.py                     # 80 episodes -> dataset/ (about 2,800 images)
+    python make_yolo_data.py                     # 120 episodes -> dataset/ (about 2,800 images)
     python make_yolo_data.py --episodes 3        # a quick test
     python make_yolo_data.py --start 0 --episodes 20   # seeds 0..19 (run several terminals
                                                        # with different --start to go faster)
@@ -38,12 +38,14 @@ from simulation import Simulation
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--episodes", type=int, default=80)
+    parser.add_argument("--episodes", type=int, default=120)
     parser.add_argument("--start", type=int, default=0, help="first seed")
     parser.add_argument("--layouts", nargs="+", default=["town", "town", "street"])
     parser.add_argument("--seconds", type=float, default=40.0, help="length of each episode")
     parser.add_argument("--every", type=float, default=1.0, help="seconds between pictures")
     parser.add_argument("--hop", type=float, default=8.0, help="seconds before the camera moves to another car")
+    parser.add_argument("--min-move", type=float, default=2.0,
+                        help="metres the camera must move between two pictures (no near-duplicate pictures)")
     parser.add_argument("--keep-empty", type=float, default=0.25,
                         help="share of pictures with nobody in them that are kept")
     parser.add_argument("--png", action="store_true", help="save .png instead of .jpg")
@@ -84,7 +86,7 @@ def main():
             state = sim.reset(seed=seed)
             if drive:
                 driver.reset()
-            carrier, hop_left = None, 0.0
+            carrier, hop_left, last_shot = None, 0.0, None
             steps = int(args.seconds / config.CONTROL_DT)
             every = max(1, round(args.every / config.CONTROL_DT))
             for step in range(steps):
@@ -104,10 +106,15 @@ def main():
                     cars = [v for v in sim.traffic.vehicles if v.active] if sim.traffic else []
                     if not cars:
                         continue
-                    if carrier is None or not carrier.active or hop_left <= 0:
-                        carrier = cars[int(rng.integers(len(cars)))]
-                        hop_left = args.hop
+                    stuck = carrier is not None and carrier.v < 0.3 and carrier.stopped_for > 3.0
+                    if carrier is None or not carrier.active or hop_left <= 0 or stuck:
+                        moving = [v for v in cars if v.v > 1.0] or cars       # prefer a car that is driving
+                        carrier = moving[int(rng.integers(len(moving)))]
+                        hop_left, last_shot = args.hop, None
                     pose = carrier
+                if last_shot is not None and \
+                        ((pose.x - last_shot[0]) ** 2 + (pose.y - last_shot[1]) ** 2) ** 0.5 < args.min_move:
+                    continue                               # camera hardly moved: skip a near-duplicate picture
                 sim.sync_visuals()                         # headless: move the bodies before the picture
                 rgb, _, seg, _ = cam.capture(pose, lighting, config.CAMERA_JITTER, rng)
                 boxes = person_boxes(seg, sim.peds)
@@ -121,6 +128,7 @@ def main():
                 rgb = augment(rgb, rng)
                 name = f"{layout}_s{seed:04d}_t{step:04d}"
                 save_sample(rgb, boxes, name, args.out, split, "png" if args.png else "jpg")
+                last_shot = (pose.x, pose.y)
                 iw.writerow([name, split, seed, layout, lighting, people, "robot" if drive else "traffic"])
                 saved[split] += 1
             datasets.restore(old)

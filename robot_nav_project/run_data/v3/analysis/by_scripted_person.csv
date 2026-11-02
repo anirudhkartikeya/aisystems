@@ -1,0 +1,16 @@
+person,expected,brain,runs,correct %,contact %,mean closest gap (m),actions
+P1,swerve_left,reactive,40,100.0,0.0,1.25,swerve_left 40
+P1,swerve_left,predictive,40,95.0,0.0,1.03,"swerve_left 38, never reached 1, stop 1"
+P1,swerve_left,lstm,40,100.0,0.0,1.0,swerve_left 40
+P2,swerve_right,reactive,40,0.0,47.5,0.18,"stop 39, straight 1"
+P2,swerve_right,predictive,40,32.5,0.0,2.69,"straight 23, swerve_right 13, stop 3, never reached 1"
+P2,swerve_right,lstm,40,27.5,0.0,1.19,"straight 27, swerve_right 11, stop 2"
+P3,stop,reactive,40,97.5,0.0,2.58,"stop 39, straight 1"
+P3,stop,predictive,40,95.0,0.0,4.47,"stop 38, never reached 1, straight 1"
+P3,stop,lstm,40,92.5,0.0,2.71,"stop 37, straight 3"
+P4,swerve_right,reactive,40,97.5,0.0,1.26,"swerve_right 39, stop 1"
+P4,swerve_right,predictive,40,95.0,0.0,3.22,"swerve_right 38, never reached 1, stop 1"
+P4,swerve_right,lstm,40,100.0,0.0,1.4,swerve_right 40
+P5,decide,reactive,40,-,45.0,0.15,"stop 25, swerve_right 13, straight 2"
+P5,decide,predictive,40,-,0.0,2.75,"straight 19, swerve_right 18, never reached 2, stop 1"
+P5,decide,lstm,40,-,2.5,0.93,"straight 17, swerve_right 12, stop 9, never reached 2"

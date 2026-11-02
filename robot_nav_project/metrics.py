@@ -18,6 +18,44 @@ import numpy as np
 import config
 
 
+# ---------------- the ONE definition of "gap", "contact" and "near miss" ----------------
+def surface_gap(footprint, x, y, radius):
+    """Gap (m) between the car's SURFACE and a person's SURFACE - not between centres.
+    The car is a row of circles `footprint` [(cx, cy, r), ...]; the person is a circle
+    (x, y, radius). Gap < 0 means they overlap (a contact)."""
+    return min(math.hypot(cx - x, cy - y) - cr for cx, cy, cr in footprint) - radius
+
+
+def count_contacts_and_near_misses(gaps, near=None, rearm=None):
+    """Replay ONE person's gap series (one value per 0.1 s step, None = farther than 15 m,
+    not checked) -> (contacts, near_misses).
+    contact   : the gap goes below 0 (counted once until they separate again)
+    near miss : the gap goes below NEAR_MISS_DIST without touching (counted once, and only
+                counted again after the gap has opened past NEAR_MISS_DIST + NEAR_MISS_REARM)
+    EpisodeMetrics.step() applies exactly this rule live; check_run_dataset.py replays it
+    on the saved logs."""
+    near = config.NEAR_MISS_DIST if near is None else near
+    rearm = config.NEAR_MISS_REARM if rearm is None else rearm
+    touching = is_near = False
+    contacts = misses = 0
+    for g in gaps:
+        if g is None:
+            continue
+        if g < 0:
+            if not touching:
+                contacts += 1
+                touching = True
+        else:
+            touching = False
+            if g < near:
+                if not is_near:
+                    misses += 1
+                    is_near = True
+            elif g > near + rearm:
+                is_near = False
+    return contacts, misses
+
+
 class EpisodeMetrics:
     def __init__(self, sim, driver=None):
         self.sim, self.driver = sim, driver
@@ -72,7 +110,7 @@ class EpisodeMetrics:
             if abs(ped.x - r.x) > 15 or abs(ped.y - r.y) > 15:
                 self.prev_gap.pop(ped.ped_id, None)
                 continue
-            gap = min(math.hypot(cx - ped.x, cy - ped.y) - cr for cx, cy, cr in foot) - ped.radius
+            gap = surface_gap(foot, ped.x, ped.y, ped.radius)
             pid = ped.ped_id
             if gap < 0:
                 if pid not in self.touching:
@@ -84,7 +122,7 @@ class EpisodeMetrics:
                     if pid not in self.near:
                         self.near_misses += 1
                         self.near.add(pid)
-                elif gap > config.NEAR_MISS_DIST + 0.3:
+                elif gap > config.NEAR_MISS_DIST + config.NEAR_MISS_REARM:
                     self.near.discard(pid)
             prev = self.prev_gap.get(pid)
             if prev is not None and gap > 0 and speed > 0.3:
@@ -154,6 +192,12 @@ class EpisodeMetrics:
         correct = sum(1 for c in graded if c["action"] == c["expected"] and c["min_gap"] > 0)
         reacts = [self.reaction[i] for i in self.reaction]
         ade, fde = self._prediction_errors(sim.t)
+        # a run that STOPPED at a contact (run_sim.py without --drive-through) ends inside the step
+        # that made it, so step() never saw it: count that contact here
+        if info["result"] == "collision_pedestrian":
+            self.ped_collisions = max(self.ped_collisions, 1)
+        if info["result"] == "collision_vehicle":
+            self.vehicle_collisions = max(self.vehicle_collisions, 1)
         row = {
             "brain": brain, "seed": info["seed"], "result": info["result"],
             "success": int(info["result"] == "goal" and self.ped_collisions == 0 and self.vehicle_collisions == 0),

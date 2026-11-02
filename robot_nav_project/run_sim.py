@@ -16,14 +16,18 @@
 
     python run_sim.py --brain reactive          # who drives: predictive (default), reactive, or
     python run_sim.py --brain none              #   none = the old placeholder that ignores people
+    python run_sim.py --brain lstm              # the trained LSTM v2 predicts where people go
 
 The car is driven by a brain (brains.py) + the shared planner (planner.py):
 it sees people only through its front camera (perception.py), predicts where
 they will go (or not, for the reactive brain) and picks a safe path: keep
 going, slow down, swerve, or stop. The text above the car says what it is
-doing and why. At the end the run's metrics are printed (metrics.py).
+doing and why. At the end the run's metrics are printed (metrics.py) and saved as a
+report in run_reports/<brain>_seed<seed>_<date-time>/ (report.html opens in the browser,
+plus report.txt and a speed / closest-gap chart). --no-report skips it.
 """
 import argparse
+import os
 import time
 
 import pybullet as p
@@ -54,7 +58,8 @@ def main():
     parser.add_argument("--speed", type=float, default=None,
                         help="playback speed: 1 = real time, 0.5 = slow motion, 2 = double")
     parser.add_argument("--headless", action="store_true")
-    parser.add_argument("--brain", choices=["predictive", "reactive", "none"], default=config.BRAIN,
+    parser.add_argument("--no-report", action="store_true", help="don't save / open the run report")
+    parser.add_argument("--brain", choices=["predictive", "reactive", "lstm", "none"], default=config.BRAIN,
                         help="who drives the car (none = old placeholder that ignores people)")
     args = parser.parse_args()
     if args.drive_through:
@@ -87,6 +92,10 @@ def main():
         print("The brains + planner drive the car on the street and town layouts; "
               "using the placeholder driver here.")
     rec = EpisodeMetrics(sim, driver) if not args.robot_off else None
+    trace = None
+    if rec and not args.no_report:
+        from run_report import Trace
+        trace = Trace(sim, driver)
 
     cam = None
     if args.camera and not args.robot_off:
@@ -106,6 +115,8 @@ def main():
             state, info = sim.step(vx, vy)
             if rec:
                 rec.step()
+            if trace and not sim.done:
+                trace.step()
             if cam and step % config.CAMERA_EVERY == 0:
                 sim.sync_visuals()
                 rgb, depth, seg, _ = cam.capture(sim.robot)
@@ -128,10 +139,19 @@ def main():
               f"hit cars {row['vehicle_collisions']}  |  near misses {row['near_misses']}  |  "
               f"hard brakes {row['hard_brakes']}  |  time stopped {row['time_stopped']} s  |  "
               f"ADE {row['ade']} m  FDE {row['fde']} m")
-        for p in people:
-            ok = "OK " if p["action"] == p["expected"] and p["min_gap"] > 0 else ("-- " if p["expected"] == "decide" else "NO ")
-            print(f"   {ok}{p['name']}: expected {p['expected']:12s} did {str(p['action']):12s} "
-                  f"closest {p['min_gap']:.2f} m  ({p['behaviour']}, from the {p['side']}, contact {p['contact']:+.1f})")
+        for person in people:
+            ok = "OK " if person["action"] == person["expected"] and person["min_gap"] > 0 else \
+                ("-- " if person["expected"] == "decide" else "NO ")
+            print(f"   {ok}{person['name']}: expected {person['expected']:12s} did {str(person['action']):12s} "
+                  f"closest {person['min_gap']:.2f} m  ({person['behaviour']}, from the {person['side']}, "
+                  f"contact {person['contact']:+.1f})")
+        if trace:
+            from run_report import write_report
+            folder, page = write_report(info, row, people, trace, args)
+            print(f"Report saved: {folder}/ (report.html, report.txt, report.png)")
+            if not args.headless:
+                import webbrowser
+                webbrowser.open("file://" + os.path.abspath(page))
     if cam:
         print(f"Saved {saved} camera images to '{config.DATASET_DIR}/images' "
               f"and labels to '{config.DATASET_DIR}/labels'")

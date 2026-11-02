@@ -1,0 +1,35 @@
+input,group,FDE_increase_m,spread_m,FDE_increase_pct
+movement history (own past steps),movement,0.8326,0.0046,87.3725
+to_road_x,road,0.2948,0.0022,30.9395
+kerb,road,0.2082,0.0024,21.8534
+xing_dist,crossing,0.1791,0.0031,18.7938
+xing_dy,crossing,0.1296,0.0002,13.5977
+xing_dx,crossing,0.112,0.001,11.7561
+to_road_y,road,0.0998,0.0005,10.4678
+ped0_dvy,nearby people,0.0781,0.0012,8.1968
+ped0_dvx,nearby people,0.0714,0.0017,7.4925
+xing_signal,crossing,0.048,0.0014,5.0339
+ped0_dx,nearby people,0.0456,0.0015,4.79
+ped0_dy,nearby people,0.0442,0.0008,4.6417
+xing_walk,crossing,0.0411,0.0011,4.3087
+on_xing,crossing,0.0176,0.0007,1.8498
+crowd,nearby people,0.0156,0.0011,1.641
+robot_dvx,robot car,0.0135,0.0001,1.42
+on_road,road,0.0131,0.0003,1.3753
+ped1_dvy,nearby people,0.0092,0.0007,0.9694
+robot_dvy,robot car,0.0089,0.0003,0.9325
+ped1_dvx,nearby people,0.0066,0.0002,0.6957
+robot_present,robot car,0.0064,0.0004,0.6743
+robot_dy,robot car,0.0057,0.0008,0.6019
+ped1_dx,nearby people,0.0057,0.0004,0.5976
+car_dy,nearest car,0.0048,0.0003,0.5071
+ped1_dy,nearby people,0.0045,0.0003,0.4775
+car_dvy,nearest car,0.0039,0.0003,0.4106
+car_dx,nearest car,0.0037,0.0006,0.3911
+car_present,nearest car,0.0034,0.0007,0.3584
+ped2_dvx,nearby people,0.0032,0.0001,0.3326
+ped2_dvy,nearby people,0.003,0.001,0.3175
+robot_dx,robot car,0.0029,0.0004,0.304
+car_dvx,nearest car,0.0029,0.0005,0.3025
+ped2_dy,nearby people,0.0017,0.0005,0.1784
+ped2_dx,nearby people,0.0016,0.0005,0.1698

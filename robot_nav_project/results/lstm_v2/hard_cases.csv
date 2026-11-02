@@ -1,0 +1,7 @@
+,constant velocity,LSTM v1 (homework run 1),LSTM v2 without context,LSTM v2 with context,examples
+all examples,1.236,1.213,1.08,0.957,56021.0
+HARD: person changes what they do (stop / start crossing / turn back),1.958,1.642,1.57,1.424,17181.0
+on the road in the next 3.2 s,1.297,1.409,1.209,0.937,10188.0
+a car within 10 m,1.275,1.238,1.114,0.98,22775.0
+children,1.376,1.272,1.131,0.962,2333.0
+elderly,0.948,0.918,0.826,0.749,5204.0

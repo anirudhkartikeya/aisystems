@@ -1,0 +1,31 @@
+person,timing,brain,runs,contact %,mean closest gap (m)
+P1,early (steps out sooner) (median -3.26 s),reactive,20,0.0,1.24
+P1,late (median -3.26 s),reactive,20,0.0,1.25
+P1,early (steps out sooner) (median -3.26 s),predictive,20,0.0,1.25
+P1,late (median -3.26 s),predictive,20,0.0,0.81
+P1,early (steps out sooner) (median -3.26 s),lstm,20,0.0,1.12
+P1,late (median -3.26 s),lstm,20,0.0,0.88
+P2,early (steps out sooner) (median +0.29 s),reactive,20,10.0,0.83
+P2,late (median +0.29 s),reactive,20,85.0,-0.48
+P2,early (steps out sooner) (median +0.29 s),predictive,20,0.0,4.21
+P2,late (median +0.29 s),predictive,20,0.0,1.16
+P2,early (steps out sooner) (median +0.29 s),lstm,20,0.0,1.32
+P2,late (median +0.29 s),lstm,20,0.0,1.06
+P3,early (steps out sooner) (median +0.12 s),reactive,20,0.0,2.78
+P3,late (median +0.12 s),reactive,20,0.0,2.38
+P3,early (steps out sooner) (median +0.12 s),predictive,20,0.0,6.57
+P3,late (median +0.12 s),predictive,20,0.0,2.38
+P3,early (steps out sooner) (median +0.12 s),lstm,20,0.0,3.05
+P3,late (median +0.12 s),lstm,20,0.0,2.38
+P4,early (steps out sooner) (median -3.22 s),reactive,20,0.0,1.26
+P4,late (median -3.22 s),reactive,20,0.0,1.25
+P4,early (steps out sooner) (median -3.22 s),predictive,20,0.0,1.23
+P4,late (median -3.22 s),predictive,20,0.0,5.2
+P4,early (steps out sooner) (median -3.22 s),lstm,20,0.0,1.43
+P4,late (median -3.22 s),lstm,20,0.0,1.36
+P5,early (steps out sooner) (median -0.54 s),reactive,20,5.0,0.96
+P5,late (median -0.54 s),reactive,20,85.0,-0.65
+P5,early (steps out sooner) (median -0.54 s),predictive,20,0.0,4.51
+P5,late (median -0.54 s),predictive,20,0.0,0.99
+P5,early (steps out sooner) (median -0.54 s),lstm,20,0.0,1.0
+P5,late (median -0.54 s),lstm,20,5.0,0.85
