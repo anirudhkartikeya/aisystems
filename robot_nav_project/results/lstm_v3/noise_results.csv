@@ -1,0 +1,10 @@
+camera noise (m),model,ADE_m,FDE_m
+0.0,constant velocity (last filtered step),0.59,1.245
+0.0,LSTM v2 (results/lstm_v2/lstm_v2.pt),0.458,0.963
+0.0,"LSTM v3 (noisy, filtered tracks)",0.501,1.01
+0.1,constant velocity (last filtered step),0.82,1.577
+0.1,LSTM v2 (results/lstm_v2/lstm_v2.pt),0.836,1.495
+0.1,"LSTM v3 (noisy, filtered tracks)",0.548,1.056
+0.3,constant velocity (last filtered step),1.444,2.563
+0.3,LSTM v2 (results/lstm_v2/lstm_v2.pt),1.487,2.435
+0.3,"LSTM v3 (noisy, filtered tracks)",0.663,1.176

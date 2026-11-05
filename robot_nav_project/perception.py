@@ -17,6 +17,11 @@ will give in Phase 2. (The positions are exact here. For stress tests, config ca
 camera faults: PERCEPTION_NOISE = random position error, PERCEPTION_MISS_RATE = share of
 camera sightings lost, PERCEPTION_DELAY = the brain gets positions this many seconds old,
 with their true time stamps. All are 0 = off by default.)
+
+With TRACK_FILTER = "kalman" (default) every track runs a Kalman filter
+(tracking.py): the history holds the smoothed positions and track.velocity the
+filter's velocity, so every brain gets the same cleaned-up tracks. "none" keeps
+the raw measurements.
 """
 import math
 from collections import deque
@@ -24,6 +29,7 @@ from collections import deque
 import numpy as np
 
 import config
+from tracking import KalmanCV, SensorNoise
 
 
 class Track:
@@ -34,10 +40,33 @@ class Track:
         self.radius = radius
         self.history = deque(maxlen=int(config.TRACK_HISTORY / config.CONTROL_DT) + 1)
         self.last_seen = -math.inf
+        self.kf = None              # Kalman filter (TRACK_FILTER = "kalman")
+        self.raw = None             # last raw measurement (t, x, y), before filtering
 
     @property
     def position(self):
         return self.history[-1][1], self.history[-1][2]
+
+    @property
+    def velocity(self):
+        """The filter's velocity, or None without a filter (or with too few measurements)."""
+        if self.kf is None or self.kf.n < 3:
+            return None
+        return self.kf.velocity
+
+    def add(self, t, x, y, noise=None):
+        """Store one measurement: smoothed by the Kalman filter, or as it is.
+        noise: the camera's SensorNoise (shared by all tracks, see tracking.py)."""
+        self.raw = (t, x, y)
+        if config.TRACK_FILTER == "kalman":
+            if noise is None:
+                noise = SensorNoise(config.KALMAN_MEAS_STD, learn=False)
+            if self.kf is None:
+                self.kf = KalmanCV(t, x, y, noise.var, config.KALMAN_ACCEL)
+            else:
+                self.kf.update(t, x, y, noise)
+            x, y = self.kf.position
+        self.history.append((t, x, y))
 
 
 class Perception:
@@ -48,10 +77,14 @@ class Perception:
         self.visible = set()        # ids seen this step
         self.vehicles = []          # vehicles sensed this step (traffic.Vehicle objects)
         self._occluders = None
+        self.noise = None           # the camera's learned position noise (tracking.SensorNoise)
 
     def reset(self):
         self.rng = np.random.default_rng([int(getattr(self.sim, "seed", 0) or 0), 77])   # faults differ per seed
         self._past = {}             # person id -> recent true positions (for PERCEPTION_DELAY)
+        self.noise = SensorNoise(config.KALMAN_MEAS_STD, config.KALMAN_NOISE_FLOOR,
+                                 config.KALMAN_NOISE_RATE, config.KALMAN_LEARN_NOISE,
+                                 config.KALMAN_NOISE_CEIL)
         self.tracks.clear()
         self.visible = set()
         self.vehicles = []
@@ -134,7 +167,7 @@ class Perception:
             if config.PERCEPTION_NOISE > 0:
                 x += float(self.rng.normal(0, config.PERCEPTION_NOISE))
                 y += float(self.rng.normal(0, config.PERCEPTION_NOISE))
-            track.history.append((t_meas, x, y))
+            track.add(t_meas, x, y, self.noise)
             track.last_seen = t
 
         # forget people not seen for a while

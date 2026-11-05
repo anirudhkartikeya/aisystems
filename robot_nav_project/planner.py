@@ -604,6 +604,25 @@ class Driver:
         self._lines = []
         self._step = 0
 
+    def still_guard(self, tracks):
+        """Someone standing still right now may simply STAY there, whatever the brain predicts
+        (a learned brain often expects them to walk on, because most people who pause do).
+        For each person slower than STILL_GUARD_SPEED the planner also gets a "stays put" path
+        at their current position, so the car keeps PED_MARGIN from where they stand and never
+        bets on them moving out of the way. Only the planner sees it: the brain's own predictions
+        (and their ADE / FDE in the metrics) are unchanged."""
+        from brains import Prediction, estimate_velocity
+        mine = {pr.id: pr for pr in self.predictions}
+        extra = []
+        for tr in tracks.values():
+            if math.hypot(*estimate_velocity(tr)) >= config.STILL_GUARD_SPEED:
+                continue
+            pr = mine.get(tr.id)
+            if pr is not None and len(pr.xy) > 1 and np.ptp(pr.xy, axis=0).max() < 0.05:
+                continue                                  # the brain already says they stay put
+            extra.append(Prediction(tr.id, tr.radius, [0.0], [tr.position]))
+        return extra
+
     def act(self, state):
         sim = self.sim
         tracks = self.perception.update()
@@ -613,7 +632,8 @@ class Driver:
                 for p in sim.peds if abs(p.x - sim.robot.x) < 6 and abs(p.y - sim.robot.y) < 6]
         self.planner._now_gap = min(gaps, default=math.inf)
         self.planner._tracks = tracks
-        vx, vy = self.planner.plan(self.predictions, self.perception.vehicles)
+        guard = self.still_guard(tracks) if config.STILL_GUARD else []
+        vx, vy = self.planner.plan(self.predictions + guard, self.perception.vehicles)
         sim.drive_status = f"{self.brain.name}: {self.planner.status}"
         if sim.gui and config.SHOW_PLAN and self._step % config.SHOW_PLAN_EVERY == 0:
             self._draw()

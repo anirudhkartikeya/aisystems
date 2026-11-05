@@ -3,6 +3,8 @@
     python stress_test.py                                    # 3 brains x 8 conditions x the 20 eval seeds of run_data/v3
     python stress_test.py --seeds 10 --brains predictive lstm
     python stress_test.py --split dev                        # on the dev seeds instead
+    python stress_test.py --split dev --set TRACK_FILTER=none --out run_data/stress_dev_raw
+                                                             # any config.py setting, for every run
 
 All runs so far used PERFECT positions of people. A real camera + YOLO is worse, so the camera can be
 given faults (perception.py, all off by default):
@@ -17,6 +19,7 @@ The clean runs must equal the saved dataset - checked and reported.
 Writes run_data/stress/: stress_runs.csv, stress_summary.csv, stress_report.txt, stress.png, stress.json
 """
 import argparse
+import ast
 import csv
 import datetime
 import json
@@ -43,7 +46,7 @@ _SIM = None
 
 
 def run_stress(job):
-    brain, seed, cond, layout, scenario = job
+    brain, seed, cond, layout, scenario, settings = job
     config.STOP_ON_COLLISION = False
     from make_run_dataset import apply_variation, seed_variation
     from metrics import EpisodeMetrics
@@ -54,8 +57,12 @@ def run_stress(job):
         import torch
         torch.set_num_threads(1)
     old = apply_variation(seed_variation(seed), layout)
+    for k, v in settings.items():                       # --set values win over the seed's variation
+        old.setdefault(k, getattr(config, k))
+        setattr(config, k, v)
     faults = CONDITIONS[cond]
-    old.update({k: getattr(config, k) for k in faults})
+    for k in faults:
+        old.setdefault(k, getattr(config, k))
     for k, v in faults.items():
         setattr(config, k, v)
     try:
@@ -89,7 +96,18 @@ def main():
     ap.add_argument("--scenario", default="crossing")
     ap.add_argument("--out", default="run_data/stress")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 4) - 2))
+    ap.add_argument("--set", nargs="+", default=[], metavar="KEY=VALUE",
+                    help="change config.py settings for every run, e.g. TRACK_FILTER=none KALMAN_ACCEL=1.0")
     args = ap.parse_args()
+    settings = {}
+    for item in args.set:
+        k, v = item.split("=", 1)
+        if not hasattr(config, k):
+            raise SystemExit(f"--set: config.py has no setting {k}")
+        try:
+            settings[k] = ast.literal_eval(v)
+        except (ValueError, SyntaxError):
+            settings[k] = v                                   # plain text, e.g. none / kalman
     if args.layout in ("street", "town"):
         config.use_street_settings()
     os.makedirs(args.out, exist_ok=True)
@@ -97,7 +115,10 @@ def main():
         seeds = sorted(int(r["seed"]) for r in csv.DictReader(f) if r["split"] == args.split)
     if args.seeds:
         seeds = seeds[:args.seeds]
-    jobs = [(b, s, c, args.layout, args.scenario) for c in args.conditions for s in seeds for b in args.brains]
+    jobs = [(b, s, c, args.layout, args.scenario, settings)
+            for c in args.conditions for s in seeds for b in args.brains]
+    filt = settings.get("TRACK_FILTER", config.TRACK_FILTER)
+    print(f"tracking filter: {filt}" + (f" | settings: {settings}" if settings else ""))
     print(f"{len(jobs)} runs: {len(args.brains)} brains x {len(args.conditions)} conditions x {len(seeds)} "
           f"{args.split} seeds ({seeds[0]}-{seeds[-1]}) on {args.workers} workers ...")
     t0 = time.time()
@@ -126,6 +147,12 @@ def main():
         clean = [r for r in rows if r["condition"] == "clean" and (r["brain"], r["seed"]) in ds]
         same = sum(all(str(r[k]) == ds[(r["brain"], r["seed"])][k] for k in keys) for r in clean)
         check = f"clean runs identical to {saved}: {same}/{len(clean)}"
+        try:
+            made_with = json.load(open(os.path.join(args.dataset, "manifest.json")))["config"].get("TRACK_FILTER", "none")
+        except Exception:
+            made_with = "?"
+        if made_with != filt:
+            check += f" (not expected to match: the dataset used tracking filter '{made_with}', this test '{filt}')"
 
     # summary
     rng = np.random.default_rng(0)
@@ -159,7 +186,7 @@ def main():
     cols = list(summ[0])
     widths = [max(len(c), *(len(str(r[c])) for r in summ)) for c in cols]
     lines = [f"Stress test: {len(seeds)} {args.split} seeds x {len(args.brains)} brains x {len(args.conditions)} camera conditions",
-             check, "", "  ".join(c.ljust(w) for c, w in zip(cols, widths))]
+             f"tracking filter: {filt}" + (f" | settings: {settings}" if settings else ""), check, "", "  ".join(c.ljust(w) for c, w in zip(cols, widths))]
     lines += ["  ".join(str(r[c]).ljust(w) for c, w in zip(cols, widths)) for r in summ]
     open(os.path.join(args.out, "stress_report.txt"), "w").write("\n".join(lines) + "\n")
     print("\n" + "\n".join(lines))
@@ -167,7 +194,10 @@ def main():
     from make_run_dataset import code_version, versions
     json.dump({"created": datetime.datetime.now().isoformat(timespec="seconds"), "code_version": code_version(here)[0],
                "versions": versions(), "seeds": seeds, "split": args.split, "brains": args.brains,
-               "conditions": {c: CONDITIONS[c] for c in args.conditions}, "clean_check": check},
+               "conditions": {c: CONDITIONS[c] for c in args.conditions}, "clean_check": check,
+               "tracking_filter": filt, "settings": settings,
+               "kalman": {"KALMAN_MEAS_STD": settings.get("KALMAN_MEAS_STD", config.KALMAN_MEAS_STD),
+                          "KALMAN_ACCEL": settings.get("KALMAN_ACCEL", config.KALMAN_ACCEL)}},
               open(os.path.join(args.out, "stress.json"), "w"), indent=1)
 
     try:
@@ -183,7 +213,7 @@ def main():
             ax.set_xticks(range(len(args.conditions)), args.conditions, rotation=35, ha="right", fontsize=8)
             ax.set_title(key)
         axes[0].legend()
-        fig.suptitle(f"Camera faults vs safety ({len(seeds)} {args.split} seeds per point)")
+        fig.suptitle(f"Camera faults vs safety ({len(seeds)} {args.split} seeds per point, tracking filter: {filt})")
         plt.tight_layout(); plt.savefig(os.path.join(args.out, "stress.png"), dpi=120); plt.close()
     except Exception as e:
         print("(no chart:", e, ")")

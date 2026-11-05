@@ -1,0 +1,62 @@
+{
+ "created": "2026-11-05T15:52:42",
+ "code_version": "94c93a6713d6",
+ "versions": {
+  "python": "3.10.20",
+  "numpy": "1.26.4",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "pybullet": "3.2.5",
+  "torch": "2.14.0"
+ },
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "split": "dev",
+ "brains": [
+  "reactive",
+  "predictive",
+  "lstm"
+ ],
+ "conditions": {
+  "clean": {},
+  "noise 0.1 m": {
+   "PERCEPTION_NOISE": 0.1
+  },
+  "noise 0.3 m": {
+   "PERCEPTION_NOISE": 0.3
+  },
+  "YOLO-like mix": {
+   "PERCEPTION_NOISE": 0.1,
+   "PERCEPTION_MISS_RATE": 0.2,
+   "PERCEPTION_DELAY": 0.2
+  }
+ },
+ "clean_check": "clean runs identical to run_data/v3/runs.csv: 60/60",
+ "tracking_filter": "none",
+ "settings": {
+  "TRACK_FILTER": "none"
+ },
+ "kalman": {
+  "KALMAN_MEAS_STD": 0.1,
+  "KALMAN_ACCEL": 0.8
+ }
+}

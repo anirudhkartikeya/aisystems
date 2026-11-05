@@ -3,6 +3,7 @@
     python train_lstm.py                  # 3 runs (v1 replica, v2 without context, v2 with context), CPU
     python train_lstm.py --epochs 8       # quicker
     python train_lstm.py --runs v2        # only the full v2 model
+    python train_lstm.py --noisy          # LSTM v3: trained on noisy, Kalman-filtered tracks -> results/lstm_v3/
 
 Uses the LSTM dataset (trajectories/*.csv from make_data.py) - nothing new to generate.
 Every past step of a person gets the context from lstm_features.py (kerb, crossing and its
@@ -14,6 +15,15 @@ same as in training_experiments.ipynb (history 12 points, future 8, every 4th po
 so the numbers compare directly. The test split is not used.
 Writes results/lstm_v2/: results.csv (every run), hard_cases.csv, lstm_v2.pt (the best model with
 everything the car needs to use it), loss curves.
+
+--noisy (LSTM v3): a real camera's positions wobble, and the car smooths them with a Kalman filter
+(perception.py / tracking.py) before the LSTM sees them. v2 only ever saw perfect tracks. With --noisy,
+every training example's history is rebuilt the way the car would see it: the 0.4 s points are
+filled in to the camera's 0.1 s, random camera noise is added (none for --clean-share of the
+examples, otherwise 0.02 to --noise-max m), and the car's own Kalman filter (same settings as
+config.py) smooths it. The target stays the TRUE future. Validation is reported at 0 / 0.1 / 0.3 m
+noise for constant velocity, v2 (if results/lstm_v2/lstm_v2.pt exists) and v3, on the same noise.
+Writes results/lstm_v3/: results.csv, noise_results.csv, hard_cases.csv, lstm_v3.pt, curves.png.
 """
 import argparse
 import json
@@ -28,6 +38,7 @@ import torch.nn as nn
 
 import config
 import lstm_features as lf
+from tracking import kalman_batch
 from roadmap import RoadMap
 
 ap = argparse.ArgumentParser()
@@ -43,8 +54,15 @@ ap.add_argument("--device", default="cpu", help="cpu (default, leaves the GPU fr
 ap.add_argument("--threads", type=int, default=8)
 ap.add_argument("--warmup", type=float, default=5.0, help="seconds make_data.py skipped before logging")
 ap.add_argument("--seed", type=int, default=0)
-ap.add_argument("--out", default="results/lstm_v2")
+ap.add_argument("--out", default=None, help="default: results/lstm_v2 (results/lstm_v3 with --noisy)")
+ap.add_argument("--noisy", action="store_true", help="LSTM v3: train on noisy, Kalman-filtered tracks")
+ap.add_argument("--noise-max", type=float, default=0.3, help="--noisy: largest camera noise (m)")
+ap.add_argument("--clean-share", type=float, default=0.25, help="--noisy: share of examples with no noise")
+ap.add_argument("--compare", default="results/lstm_v2/lstm_v2.pt", help="--noisy: older model to compare with")
 args = ap.parse_args()
+VERSION = "v3" if args.noisy else "v2"
+if args.out is None:
+    args.out = f"results/lstm_{VERSION}"
 
 torch.set_num_threads(args.threads)
 torch.manual_seed(args.seed)
@@ -53,6 +71,8 @@ device = torch.device(args.device)
 os.makedirs(args.out, exist_ok=True)
 DT, OBS_MAX, PRED = 0.4, 12, 8
 WIN = OBS_MAX + PRED
+CAM_DT = config.CONTROL_DT                          # the car's perception runs every 0.1 s
+FINE = int(round(DT / CAM_DT))                      # camera steps per data step (4)
 
 
 # ======================================================================= 1. data + context features
@@ -96,6 +116,7 @@ def load_features():
 print("loading data ...")
 peds, FEAT = load_features()
 XY = peds[["x", "y"]].to_numpy(np.float32)
+VEL = peds[["vx", "vy"]].to_numpy(np.float32)
 MODE = peds["mode"].to_numpy()
 KIND = peds["kind"].to_numpy()
 ROAD = peds["on_road"].to_numpy()
@@ -127,15 +148,65 @@ binary = [i for i, n in enumerate(lf.NAMES) if n in ("on_road", "xing_signal", "
 CTX_MEAN[binary], CTX_STD[binary] = 0.0, 1.0
 
 
-def batch(starts, obs, context):
-    """Model inputs, future (relative to the last seen point) and the constant-velocity guess."""
+def seen_by_car(w, sigma, rng):
+    """The 12 history points as the car's perception would give them: filled in to 0.1 s,
+    camera noise sigma (m, one per example) added, smoothed by the car's Kalman filter."""
+    tt = np.arange((OBS_MAX - 1) * FINE + 1) / FINE                     # 0 .. 11 in data steps
+    k = np.minimum(tt.astype(int), OBS_MAX - 2)
+    frac = (tt - k)[None, :, None]
+    fine = w[:, k] * (1 - frac) + w[:, k + 1] * frac                     # (B, 45, 2)
+    z = fine + rng.normal(size=fine.shape) * sigma[:, None, None]
+    var = np.clip(sigma, config.KALMAN_NOISE_FLOOR, config.KALMAN_NOISE_CEIL) ** 2   # what the car learns
+    return kalman_batch(z, CAM_DT, var, config.KALMAN_ACCEL)[:, ::FINE].astype(np.float32)
+
+
+def as_car_sees(ctx, true_xy, true_v, seen_xy, seen_v):
+    """The cars / people context is measured FROM the person: other - person, for position and
+    velocity. The CSV context used the person's true position and velocity; in the car they come
+    from the noisy, filtered track (brains.py: the person's own velocity = filtered step / 0.4 s).
+    Without this, a noisy-trained model can read the person's exact velocity from the context
+    (e.g. car_dvx = car velocity - person velocity) - it looks great offline and fails in the car."""
+    ctx = ctx.copy()
+    dp = (true_xy - seen_xy).astype(np.float32)                         # (B, obs-1, 2)
+    dv = (true_v - seen_v).astype(np.float32)
+    o = 10                                                               # frame features start here
+    for c in (o + 0, o + 5):                                             # nearest car, the robot car
+        on = ctx[..., c + 4:c + 5] > 0.5
+        ctx[..., c:c + 2] += np.where(on, dp / 10.0, 0.0)
+        ctx[..., c + 2:c + 4] += np.where(on, dv / 5.0, 0.0)
+    for k in range(3):                                                   # the 3 nearest people
+        c = o + 10 + 4 * k
+        on = np.abs(ctx[..., c:c + 4]).sum(-1, keepdims=True) > 0
+        ctx[..., c:c + 2] += np.where(on, dp / 3.0, 0.0)
+        ctx[..., c + 2:c + 4] += np.where(on, dv / 1.5, 0.0)
+    return ctx
+
+
+def draw_noise(n, rng):
+    """Camera noise per training example: none for --clean-share, else 0.02 .. --noise-max m."""
+    sigma = rng.uniform(0.02, args.noise_max, n)
+    sigma[rng.random(n) < args.clean_share] = 0.0
+    return sigma
+
+
+def batch(starts, obs, context, sigma=None, rng=None):
+    """Model inputs, future (relative to the last seen point) and the constant-velocity guess.
+    sigma (m, per example): rebuild the history the way the car sees it (noise + Kalman filter);
+    the future stays the true one, measured from the car's (filtered) last point."""
     w = XY[starts[:, None] + OFF]                                        # (B, 20, 2)
+    true_hist = w[:, OBS_MAX - obs:OBS_MAX]
+    if sigma is not None:
+        w = w.copy()
+        w[:, :OBS_MAX] = seen_by_car(w[:, :OBS_MAX], sigma, rng)
     hist = w[:, OBS_MAX - obs:OBS_MAX]
     last = w[:, OBS_MAX - 1:OBS_MAX]
     steps = np.diff(hist, axis=1) / SCALE                                # (B, obs-1, 2)
     x = steps
     if context:
-        ctx = FEAT[starts[:, None] + np.arange(OBS_MAX - obs + 1, OBS_MAX)]    # (B, obs-1, F)
+        rows = starts[:, None] + np.arange(OBS_MAX - obs + 1, OBS_MAX)
+        ctx = FEAT[rows]                                                 # (B, obs-1, F)
+        if sigma is not None:
+            ctx = as_car_sees(ctx, true_hist[:, 1:], VEL[rows], hist[:, 1:], np.diff(hist, axis=1) / DT)
         x = np.concatenate([steps, (ctx - CTX_MEAN) / CTX_STD], axis=2)
     fut = w[:, OBS_MAX:] - last
     cv = (w[:, OBS_MAX - 1] - w[:, OBS_MAX - 2])[:, None, :] * np.arange(1, PRED + 1)[None, :, None]
@@ -162,14 +233,20 @@ class Predictor(nn.Module):
         return cv + out if self.residual else out
 
 
-def predict(model, starts, obs, context, bs=8192):
-    model.eval()
-    outs = []
+def predict(model, starts, obs, context, bs=8192, sigma=None, with_future=False):
+    """sigma: camera noise (m) for every example -> the same noise for every model (fixed seed)."""
+    if model is not None:
+        model.eval()
+    rng = np.random.default_rng(1234)
+    outs, futs = [], []
     with torch.no_grad():
         for i in range(0, len(starts), bs):
-            x, _, cv = batch(starts[i:i + bs], obs, context)
-            outs.append(model(torch.from_numpy(x).to(device), torch.from_numpy(cv).to(device)).cpu().numpy())
-    return np.concatenate(outs)
+            sg = None if sigma is None else np.full(len(starts[i:i + bs]), sigma, float)
+            x, fut, cv = batch(starts[i:i + bs], obs, context, sg, rng)
+            futs.append(fut)
+            outs.append(cv if model is None else
+                        model(torch.from_numpy(x).to(device), torch.from_numpy(cv).to(device)).cpu().numpy())
+    return (np.concatenate(outs), np.concatenate(futs)) if with_future else np.concatenate(outs)
 
 
 def train(name, obs, context, residual, hidden, epochs, lr, max_train=None):
@@ -181,7 +258,8 @@ def train(name, obs, context, residual, hidden, epochs, lr, max_train=None):
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     steps_per_epoch = math.ceil(len(tr) / args.batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=epochs * steps_per_epoch)
-    _, fut_val, _ = batch(S_val, obs, context)
+    pick = 0.1 if args.noisy else None              # v3: keep the epoch that is best at 0.1 m camera noise
+    _, fut_val = predict(None, S_val, obs, context, sigma=pick, with_future=True)
     best, best_state, hist = math.inf, None, []
     t0 = time.time()
     print(f"\n=== {name}: history {obs} pts, context {'yes' if context else 'no'}, "
@@ -192,7 +270,9 @@ def train(name, obs, context, residual, hidden, epochs, lr, max_train=None):
         perm = rng.permutation(tr)
         total = 0.0
         for i in range(0, len(perm), args.batch):
-            x, fut, cv = batch(perm[i:i + args.batch], obs, context)
+            b = perm[i:i + args.batch]
+            sg = draw_noise(len(b), rng) if args.noisy else None
+            x, fut, cv = batch(b, obs, context, sg, rng)
             x, fut, cv = (torch.from_numpy(a).to(device) for a in (x, fut, cv))
             loss = ((model(x, cv) - fut) ** 2).sum(-1).mean()
             opt.zero_grad()
@@ -200,13 +280,14 @@ def train(name, obs, context, residual, hidden, epochs, lr, max_train=None):
             opt.step()
             sched.step()
             total += loss.item() * len(x)
-        pred = predict(model, S_val, obs, context)
+        pred = predict(model, S_val, obs, context, sigma=pick)
         err = np.linalg.norm(pred - fut_val, axis=2)
         ade, fde = err.mean(), err[:, -1].mean()
         hist.append((ep + 1, total / len(tr), ade, fde))
         if ade < best:
             best, best_state = ade, {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
-        print(f"  epoch {ep + 1:2d}/{epochs}: train loss {total / len(tr):.4f} | val ADE {ade:.3f} m  FDE {fde:.3f} m "
+        print(f"  epoch {ep + 1:2d}/{epochs}: train loss {total / len(tr):.4f} | val{' (0.1 m noise)' if pick else ''} "
+              f"ADE {ade:.3f} m  FDE {fde:.3f} m "
               f"| {time.time() - t0:.0f} s")
     model.load_state_dict(best_state)
     return model, hist, time.time() - t0
@@ -258,15 +339,20 @@ def latency_ms(model, obs, context, n=30, reps=100):
 
 errors = {"constant velocity": evaluate("constant velocity (predictive brain)", CV_VAL)}
 runs = []
-if args.runs == "all":
+if args.noisy:
+    runs.append(("LSTM v3 (noisy, filtered tracks)", dict(obs=args.obs, context=True, residual=True,
+                                                         hidden=args.hidden, epochs=args.epochs, lr=args.lr),
+                 f"v2 + trained on camera noise 0-{args.noise_max} m smoothed by the car's Kalman filter"))
+elif args.runs == "all":
     runs.append(("LSTM v1 (homework run 1)", dict(obs=8, context=False, residual=False, hidden=64, epochs=5,
                                                  lr=1e-3, max_train=200_000), "homework configuration"))
     runs.append(("LSTM v2 without context", dict(obs=args.obs, context=False, residual=True, hidden=args.hidden,
                                                 epochs=args.epochs, lr=args.lr),
                  "correction to const. velocity, all data, longer training"))
-runs.append(("LSTM v2 with context", dict(obs=args.obs, context=True, residual=True, hidden=args.hidden,
-                                         epochs=args.epochs, lr=args.lr),
-             "+ context: kerb, crossing + light, cars, nearby people"))
+if not args.noisy:
+    runs.append(("LSTM v2 with context", dict(obs=args.obs, context=True, residual=True, hidden=args.hidden,
+                                             epochs=args.epochs, lr=args.lr),
+                 "+ context: kerb, crossing + light, cars, nearby people"))
 
 best_model = None
 for name, cfg, change in runs:
@@ -276,6 +362,30 @@ for name, cfg, change in runs:
     curves[name] = hist
     if cfg["context"]:
         best_model = (model, cfg)
+
+# ----- with --noisy: the same validation examples as the car would see them, at 3 noise levels
+if args.noisy and best_model is not None:
+    model3, cfg3 = best_model
+    models = {"constant velocity (last filtered step)": None}
+    if args.compare and os.path.exists(args.compare):
+        ck = torch.load(args.compare, map_location="cpu", weights_only=False)
+        old = Predictor(int(ck["n_in"]), int(ck["hidden"]), True).to(device)
+        old.load_state_dict(ck["state_dict"])
+        models[f"LSTM v2 ({args.compare})"] = old
+    else:
+        print(f"(no {args.compare}: v2 is left out of the noise table)")
+    models["LSTM v3 (noisy, filtered tracks)"] = model3
+    noise_rows = []
+    for sg in (0.0, 0.1, 0.3):
+        for name, m in models.items():
+            pred, fut = predict(m, S_val, cfg3["obs"], True, sigma=sg, with_future=True)
+            err = np.linalg.norm(pred - fut, axis=2)
+            noise_rows.append({"camera noise (m)": sg, "model": name, "ADE_m": round(float(err.mean()), 3),
+                               "FDE_m": round(float(err[:, -1].mean()), 3)})
+    nt = pd.DataFrame(noise_rows)
+    nt.to_csv(os.path.join(args.out, "noise_results.csv"), index=False)
+    print("\nAS THE CAR SEES IT (camera noise + the car's Kalman filter), validation split:")
+    print(nt.to_string(index=False))
 
 # ======================================================================= 4. report + save
 table = pd.DataFrame(rows)
@@ -298,8 +408,10 @@ try:
         h = np.array(h)
         ax[0].plot(h[:, 0], h[:, 1], "o-", label=name)
         ax[1].plot(h[:, 0], h[:, 2], "o-", label=name)
-    ax[1].axhline(rows[0]["ADE_m"], color="k", ls="--", label="constant velocity")
-    ax[0].set_title("training loss"); ax[1].set_title("validation ADE (m)")
+    if not args.noisy:
+        ax[1].axhline(rows[0]["ADE_m"], color="k", ls="--", label="constant velocity")
+    ax[0].set_title("training loss")
+    ax[1].set_title("validation ADE (m)" + (" at 0.1 m camera noise" if args.noisy else ""))
     for a in ax:
         a.set_xlabel("epoch"); a.legend(fontsize=8)
     plt.tight_layout(); plt.savefig(os.path.join(args.out, "curves.png"), dpi=110)
@@ -308,9 +420,14 @@ except Exception as e:                                   # plots are optional
 
 if best_model is not None:
     model, cfg = best_model
-    path = os.path.join(args.out, "lstm_v2.pt")
+    path = os.path.join(args.out, f"lstm_{VERSION}.pt")
+    extra = {}
+    if args.noisy:
+        extra = {"train_noise": {"max_m": args.noise_max, "clean_share": args.clean_share},
+                 "kalman": {k: getattr(config, k) for k in ("KALMAN_ACCEL", "KALMAN_NOISE_FLOOR",
+                                                            "KALMAN_NOISE_CEIL", "CONTROL_DT")}}
     torch.save({"state_dict": model.state_dict(), "config": cfg, "obs": cfg["obs"], "pred": PRED, "dt": DT,
                 "scale": SCALE, "ctx_mean": CTX_MEAN, "ctx_std": CTX_STD, "feature_names": lf.NAMES,
-                "hidden": cfg["hidden"], "n_in": 2 + lf.N_FEATURES}, path)
+                "hidden": cfg["hidden"], "n_in": 2 + lf.N_FEATURES, **extra}, path)
     print(f"\nSaved the model for the car: {path}")
 print(f"Saved: {args.out}/results.csv, hard_cases.csv, curves.png")

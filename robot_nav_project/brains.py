@@ -51,8 +51,12 @@ class Prediction:
 
 
 def estimate_velocity(track, window=None):
-    """Velocity (vx, vy) from the recent history: a straight-line fit over the
-    last `window` seconds. (0, 0) if there is not enough history yet."""
+    """Velocity (vx, vy): the Kalman filter's estimate when the track has one,
+    otherwise a straight-line fit over the last `window` seconds of history.
+    (0, 0) if there is not enough history yet."""
+    v = getattr(track, "velocity", None)          # Kalman filter velocity (perception.py), if there is one
+    if v is not None:
+        return (0.0, 0.0) if math.hypot(*v) < config.VELOCITY_STILL else v
     window = config.VELOCITY_WINDOW if window is None else window
     hist = list(track.history)
     t_last = hist[-1][0]
@@ -110,7 +114,7 @@ class PredictiveBrain(Brain):
 
 
 class LSTMBrain(Brain):
-    """The trained LSTM (train_lstm.py -> results/lstm_v2/lstm_v2.pt).
+    """The trained LSTM (config.LSTM_MODEL: v3 = train_lstm.py --noisy -> results/lstm_v3/lstm_v3.pt).
 
     For every person the car sees, it takes their last 2.8 s (resampled to one point
     every 0.4 s, like the training data), adds the same context the model was trained

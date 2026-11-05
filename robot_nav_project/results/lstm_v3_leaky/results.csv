@@ -1,0 +1,3 @@
+run,change,ADE_m,FDE_m,val_examples,train_time_s,infer_ms_30_people,FDE HARD: person changes what they do (stop / start crossing / turn back),FDE on the road in the next 3.2 s,FDE a car within 10 m,FDE children,FDE elderly
+constant velocity (predictive brain),-,0.5829616,1.2361107,56021,0.0,,1.9580227,1.297158,1.2748859,1.3762527,0.9477595
+"LSTM v3 (noisy, filtered tracks)",v2 + trained on camera noise 0-0.3 m smoothed by the car's Kalman filter,0.5239972,1.0445609,56021,380.8,0.8228941698325798,1.4538075,1.0377036,1.0553592,1.0528631,0.83512044

@@ -1,0 +1,7 @@
+,constant velocity,"LSTM v3 (noisy, filtered tracks)",examples
+all examples,1.236,1.045,56021.0
+HARD: person changes what they do (stop / start crossing / turn back),1.958,1.454,17181.0
+on the road in the next 3.2 s,1.297,1.038,10188.0
+a car within 10 m,1.275,1.055,22775.0
+children,1.376,1.053,2333.0
+elderly,0.948,0.835,5204.0

@@ -331,14 +331,23 @@ PERCEPTION_MISS_RATE = 0.0     # share of camera sightings randomly lost, like a
 PERCEPTION_DELAY = 0.0         # s: the brain gets positions this old (camera + detector latency; stress tests)
 TRACK_HISTORY = 3.0            # s of past positions kept for each person
 TRACK_FORGET = 1.0             # s: forget a person not seen for this long
+TRACK_FILTER = "kalman"        # "kalman": smooth each track (tracking.py) | "none": raw measurements
+KALMAN_ACCEL = 0.8             # m/s^2: how quickly people change speed / direction (smaller = smoother, more lag)
+KALMAN_MEAS_STD = 0.1          # m: starting guess of the camera's position noise (fixed if not learned)
+KALMAN_LEARN_NOISE = True      # learn the camera's noise while driving: exact data -> little smoothing, noisy -> more
+KALMAN_NOISE_FLOOR = 0.02      # m: the learned noise never goes below this
+KALMAN_NOISE_CEIL = 0.1        # m: ... and never above this (more smoothing = later reaction to someone stepping out)
+KALMAN_NOISE_RATE = 0.03       # how fast the learned noise follows new measurements (0-1)
 
 # ---------------- Brains (brains.py) ----------------
 BRAIN = "predictive"           # run_sim.py default: "reactive", "predictive", "lstm" or "none" (old placeholder)
 PREDICTION_HORIZON = 3.0       # s: how far ahead the predictive brain looks (car at 2 m/s: 6 m)
 PREDICTION_STEP = 0.25         # s between predicted points
-LSTM_MODEL = "results/lstm_v2/lstm_v2.pt"   # the trained LSTM v2 (python train_lstm.py) for --brain lstm
+LSTM_MODEL = "results/lstm_v3/lstm_v3.pt"   # LSTM v3 (python train_lstm.py --noisy): trained on noisy, Kalman-filtered tracks. v2: results/lstm_v2/lstm_v2.pt
 VELOCITY_WINDOW = 0.6          # s of history used to estimate a person's velocity
 VELOCITY_STILL = 0.15          # m/s: slower than this counts as standing still
+STILL_GUARD = True             # planner: someone standing still may STAY there - keep the margin from where they stand
+STILL_GUARD_SPEED = 0.3        # m/s: people slower than this get that extra "stays put" check (planner.py)
 
 # ---------------- Planner (planner.py) ----------------
 PLAN_HORIZON = 4.0             # s: each candidate path is checked this far into the future

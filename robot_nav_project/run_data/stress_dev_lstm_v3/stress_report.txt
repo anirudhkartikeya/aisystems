@@ -1,0 +1,9 @@
+Stress test: 20 dev seeds x 1 brains x 4 camera conditions
+tracking filter: kalman | settings: {'LSTM_MODEL': 'results/lstm_v3/lstm_v3.pt'}
+clean runs identical to run_data/v3/runs.csv: 0/20 (not expected to match: the dataset used tracking filter 'none', this test 'kalman')
+
+condition      brain  runs  touch a person %  touch CI  contacts/run  near misses/run  closest gap (m)  goal %  time (s)  hard brakes/run  prediction FDE (m)
+clean          lstm   20    10.0              [0, 25]   0.1           0.8              0.37             95.0    123.0     1.65             1.21              
+noise 0.1 m    lstm   20    50.0              [30, 70]  0.55          1.05             0.09             50.0    157.6     3.4              1.188             
+noise 0.3 m    lstm   20    45.0              [25, 65]  0.5           1.1              0.14             75.0    143.4     9.65             1.624             
+YOLO-like mix  lstm   20    40.0              [20, 60]  0.6           0.95             0.18             90.0    128.4     4.0              1.473             

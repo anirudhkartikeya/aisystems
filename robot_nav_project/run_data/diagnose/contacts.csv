@@ -1,0 +1,6 @@
+brain,seed,condition,t,person,ped_id,person_mode,person_speed,car_speed,car_speed_1s_before,car_state,seen_by_car,planner,result
+lstm,0,noise 0.1 m,8.6,P1,0,stand,0.0,0.37,1.95,slow,True,emergency brake,timeout
+lstm,2,noise 0.1 m,118.3,P5,4,pause,0.0,0.2,0.0,slow,True,swerving right around a person,timeout
+lstm,3,noise 0.1 m,134.9,P5,4,stand,0.0,0.05,0.35,stopped,True,emergency brake,timeout
+lstm,11,noise 0.1 m,112.1,P5,4,stand,0.0,0.4,0.0,slow,True,swerving right around a person,timeout
+lstm,16,noise 0.1 m,122.2,P5,4,cross,1.54,0.03,1.6,stopped,True,emergency brake,goal
