@@ -1,7 +1,8 @@
 # Robot navigation simulator - how to run
 
-Open a terminal in this folder and activate your environment first
-(`conda activate robotnav`, or whichever one has pybullet, numpy and pillow).
+Open a terminal in this folder and set up the environment once:
+`conda env create -f environment.yml` (or `pip install -r requirements.txt`), then `conda activate aml`.
+The project overview and results are in [README.md](README.md).
 
 ## Watch it
 - `python run_sim.py` : the town. The car drives east on the 4-lane main street in the right lane,
@@ -33,6 +34,7 @@ Open a terminal in this folder and activate your environment first
 ## The brains and the planner (who drives the car)
 - `python run_sim.py` : the **predictive** brain drives (set the default with `BRAIN` in `config.py`)
 - `python run_sim.py --brain reactive` : the **reactive** brain drives
+- `python run_sim.py --brain lstm` : the **LSTM** brain drives (trained model in `results/lstm_v2/`)
 - `python run_sim.py --brain none` : the old placeholder that ignores people (it hits them)
 
 How it works, every 0.1 s:
@@ -42,7 +44,8 @@ How it works, every 0.1 s:
 2. **Brain** (`brains.py`): says where each seen person will be.
    - Reactive: where they are now.
    - Predictive: where they will be over the next 3 s, at their current walking velocity.
-   - The LSTM brain slots in here in Phase 2.
+   - LSTM: the trained LSTM v2 predicts the next 3.2 s from 2.8 s of history plus context
+     (curb, nearest crossing and its light, nearby cars and people).
 3. **Planner** (`planner.py`, the same for every brain): tries many candidate paths
    (stay, shift left or right, next lane, oncoming lane only if it is free) at several speeds, checks
    each one 4 s ahead against the people and the other cars, and drives the cheapest safe one.
@@ -121,6 +124,24 @@ Both scripts run without a window. Whole runs (seeds) go into one split - train 
 - Different lighting, crowds, traffic and camera angles in every run. Every 4th run the camera is
   on the robot car while the predictive brain drives; otherwise it rides on traffic cars all over town.
 
+## Run dataset, checks and trustworthiness
+- `python make_run_dataset.py --brains reactive predictive lstm --tag v3 --eval-start 2000 --eval-count 20` :
+  every brain drives the same seeds (dev 0-19, eval 2000-2019). Per-step logs, `split.csv` (written before
+  any run) and `manifest.json` (command, code version, config, versions, SHA-256 of every file) go to `run_data/v3/`.
+- `python check_run_dataset.py run_data/v3` : 19 checks (files match the manifest, near misses recomputed from the logs, ...).
+- `python reproduce_run.py run_data/v3 lstm_s2009` : replays one saved run and checks it matches the log.
+- `python analyze_runs.py run_data/v3` : bootstrap 95% CIs, paired per-seed comparisons, group results
+  (output in `run_data/v3/analysis/`).
+- `python stress_test.py` : the same eval seeds with perception faults (noise, missed detections, delay);
+  output in `run_data/stress/`.
+- `python explain_lstm.py` : LSTM input importance; output in `results/lstm_v2/explain/`.
+- `python explain_yolo_lime.py` : LIME on YOLO detections; output in `runs/yolo11n_sim_960/lime/`.
+
+## Train the models
+- `python train_lstm.py` : LSTM v2 on `trajectories/` (output in `results/lstm_v2/`).
+- `python train_yolo.py --imgsz 960 --name yolo11n_sim_960` : fine-tune YOLO11n on `dataset/`.
+- `python analyze_yolo.py --model runs/yolo11n_sim_960/weights/best.pt --imgsz 960` : recall by group.
+
 ## Where things are
 | File | What it does |
 |---|---|
@@ -130,10 +151,11 @@ Both scripts run without a window. Whole runs (seeds) go into one split - train 
 | `visuals.py` | how everything looks (people, cars, buildings, lights) |
 | `pedestrians.py` | how people behave |
 | `traffic.py` | how the other cars drive |
-| `simulation.py` | runs everything step by step (the brains will plug in here) |
+| `simulation.py` | runs everything step by step |
 | `camera.py` | the car camera, YOLO labels, lighting, image variety |
 | `perception.py` | what the car can see (front camera, close-range sensors, other cars) |
-| `brains.py` | the reactive and predictive brains (and the slot for the LSTM) |
+| `brains.py` | the reactive, constant-velocity (predictive) and LSTM brains |
+| `lstm_features.py` | the context features the LSTM sees |
 | `planner.py` | the shared planner and the Driver that connects perception, brain and planner |
 | `metrics.py` | the numbers recorded for every run |
 | `evaluate.py` | runs the reactive vs predictive comparison |
@@ -142,5 +164,15 @@ Both scripts run without a window. Whole runs (seeds) go into one split - train 
 | `make_models.py` | the Blender script that polishes and exports the models into `models/` |
 | `make_data.py` | the LSTM dataset script |
 | `make_yolo_data.py` | the YOLO dataset script |
+| `train_lstm.py`, `train_yolo.py` | train the LSTM v2 and fine-tune YOLO11n |
+| `analyze_yolo.py` | YOLO recall by group (size, lighting, crowd, camera) |
+| `make_run_dataset.py` | the saved run dataset (per-step logs, split, manifest) |
+| `check_run_dataset.py` | 19 automated checks on a run dataset |
+| `reproduce_run.py` | replays one saved run and recomputes its near misses |
+| `analyze_runs.py` | bootstrap CIs, paired comparisons, group results |
+| `stress_test.py` | perception faults: position noise, missed detections, delay |
+| `explain_lstm.py` | LSTM input importance (permutation + local explanations) |
+| `explain_yolo_lime.py` | LIME explanations for YOLO detections |
+| `run_report.py` | the per-run report saved by `run_sim.py` |
 
 The version before the Blender models is the `robot_nav_update` folder.
