@@ -4,6 +4,10 @@ Open a terminal in this folder and set up the environment once:
 `conda env create -f environment.yml` (or `pip install -r requirements.txt`), then `conda activate aml`.
 The project overview and results are in [README.md](README.md).
 
+**Is everything working?** `python health_check.py` (about 1 minute): 34 checks - packages, models and
+datasets are there, the building blocks, every brain drives and matches the saved stress tests, the old
+results still reproduce, run_sim, both YOLO models, the dataset scripts. Report in `health_report.txt`.
+
 ## Watch it
 - `python run_sim.py` : the town. The car drives east on the 4-lane main street in the right lane,
   moves ONCE into the left lane to get ready for the left turn, turns left at the T-junction on the green
@@ -34,18 +38,22 @@ The project overview and results are in [README.md](README.md).
 ## The brains and the planner (who drives the car)
 - `python run_sim.py` : the **predictive** brain drives (set the default with `BRAIN` in `config.py`)
 - `python run_sim.py --brain reactive` : the **reactive** brain drives
-- `python run_sim.py --brain lstm` : the **LSTM** brain drives (trained model in `results/lstm_v2/`)
+- `python run_sim.py --brain lstm` : the **LSTM** brain drives (LSTM v3, `results/lstm_v3/`; set `LSTM_MODEL` in `config.py`)
 - `python run_sim.py --brain none` : the old placeholder that ignores people (it hits them)
 
 How it works, every 0.1 s:
 1. **Perception** (`perception.py`): the car sees people only through its front camera
    (30 m, 90° wide, nobody hidden behind buildings, parked cars or other cars), plus
    close-range sensors (3 m all round). It senses other cars all round (40 m).
+   Every person's track goes through a **Kalman filter** (`tracking.py`) that smooths jumpy camera
+   positions and learns how noisy the camera is (exact positions: almost no smoothing).
+   `TRACK_FILTER = "none"` in `config.py` switches it off.
 2. **Brain** (`brains.py`): says where each seen person will be.
    - Reactive: where they are now.
    - Predictive: where they will be over the next 3 s, at their current walking velocity.
-   - LSTM: the trained LSTM v2 predicts the next 3.2 s from 2.8 s of history plus context
-     (curb, nearest crossing and its light, nearby cars and people).
+   - LSTM: the trained LSTM v3 predicts the next 3.2 s from 2.8 s of history plus context
+     (curb, nearest crossing and its light, nearby cars and people). v3 was trained on noisy,
+     Kalman-filtered tracks, like the car sees them (v2: perfect tracks only).
 3. **Planner** (`planner.py`, the same for every brain): tries many candidate paths
    (stay, shift left or right, next lane, oncoming lane only if it is free) at several speeds, checks
    each one 4 s ahead against the people and the other cars, and drives the cheapest safe one.
@@ -53,6 +61,8 @@ How it works, every 0.1 s:
    - At a zebra crossing it always stops, never swerves.
    - It waits at red lights and before turning left without the green arrow.
    - If nothing is safe it brakes as hard as it can.
+   - **Still-person guard:** someone standing still (< 0.3 m/s) may simply stay there, whatever the brain
+     predicts, so the planner also keeps its gap from where they stand (`STILL_GUARD` in `config.py`).
 
 What you see in the window:
 - Blue lines: the camera's view.
@@ -136,11 +146,29 @@ Both scripts run without a window. Whole runs (seeds) go into one split - train 
   output in `run_data/stress/`.
 - `python explain_lstm.py` : LSTM input importance; output in `results/lstm_v2/explain/`.
 - `python explain_yolo_lime.py` : LIME on YOLO detections; output in `runs/yolo11n_sim_960/lime/`.
+- `python stress_test.py --split dev --set TRACK_FILTER=none --out run_data/stress_dev_raw` : `--set` changes any
+  `config.py` setting for every run (here: no Kalman filter), to compare versions on the same scenes.
+- `python diagnose_contacts.py --brain lstm --condition "noise 0.1 m"` : for every contact: who, what they were
+  doing and what the car was doing (driving into them, or stopped and they walked into it).
 
 ## Train the models
 - `python train_lstm.py` : LSTM v2 on `trajectories/` (output in `results/lstm_v2/`).
+- `python train_lstm.py --noisy` : **LSTM v3** (the default model): the same data, but each training track is
+  rebuilt the way the car sees it - camera noise (0-0.3 m) smoothed by the car's Kalman filter (`results/lstm_v3/`).
 - `python train_yolo.py --imgsz 960 --name yolo11n_sim_960` : fine-tune YOLO11n on `dataset/`.
 - `python analyze_yolo.py --model runs/yolo11n_sim_960/weights/best.pt --imgsz 960` : recall by group.
+
+## YOLO at night, in shadows and for far-away people
+- **Night / shadow / dark clothes pictures** (own folder, new seeds; about 4 s per episode):
+  `python make_yolo_data.py --out dataset_night --start 1000 --episodes 60 --lightings night harsh_shadow dusk --weights 0.5 0.3 0.2 --dark-clothes 0.35`
+  - night = moonlight + the car's headlights + pools of light under the street lamps (`camera.night_scene`)
+  - a person only gets a label if a camera could see them (bright enough, or standing out from what is behind)
+- **Fine-tune on day + night together** (`dataset_mix.yaml`), starting from the day model:
+  `python train_yolo.py --data dataset_mix.yaml --model runs/yolo11n_sim_960/weights/best.pt --imgsz 960 --epochs 30 --name yolo11n_sim_960_night`
+- **Compare** on the same pictures: `python analyze_yolo.py --model <best.pt> --imgsz 960 --data dataset_night --tag _night`
+- **Slicing (SAHI-style)** for far-away people: `detect.py` cuts the picture into overlapping tiles and merges the
+  boxes. Off by default (`DETECT_SLICE` in `config.py`); measure it with `analyze_yolo.py ... --slice`.
+  In Python: `from detect import load_model, detect; boxes, conf = detect(load_model(path), "picture.jpg", slice=True)`
 
 ## Where things are
 | File | What it does |
@@ -173,6 +201,10 @@ Both scripts run without a window. Whole runs (seeds) go into one split - train 
 | `stress_test.py` | perception faults: position noise, missed detections, delay |
 | `explain_lstm.py` | LSTM input importance (permutation + local explanations) |
 | `explain_yolo_lime.py` | LIME explanations for YOLO detections |
+| `tracking.py` | the Kalman filter for people's tracks (and the batch version used to train LSTM v3) |
+| `detect.py` | run YOLO on one picture, optionally sliced (SAHI-style) |
+| `diagnose_contacts.py` | who each contact was with and what the car was doing |
+| `health_check.py` | checks that everything works (writes `health_report.txt`) |
 | `run_report.py` | the per-run report saved by `run_sim.py` |
 
 The version before the Blender models is the `robot_nav_update` folder.

@@ -9,6 +9,11 @@ For a varied training set, capture() can also change the lighting (time of
 day), jitter the camera a little, and augment() can add noise/blur and
 brightness changes - so YOLO does not learn one exact look.
 
+Night ("night" lighting): the scene is rendered flat (each surface's own colour)
+and then lit by night_scene(): weak moonlight, the car's own headlights (bright
+close ahead, fading with distance) and the street lamps (pools of light around
+each lamp). Far-away people between lamps stay dark - the hard case for YOLO.
+
 save_sample() writes the picture plus a YOLO label file in the standard
 folder layout:  dataset/images/<split>/name.jpg  +  dataset/labels/<split>/name.txt
 """
@@ -29,9 +34,10 @@ class RobotCamera:
         self.width = config.CAMERA_WIDTH
         self.height = config.CAMERA_HEIGHT_PX
 
-    def capture(self, pose, lighting=None, jitter=None, rng=None):
+    def capture(self, pose, lighting=None, jitter=None, rng=None, lamps=None, moon=None):
         """Render what a camera on `pose` sees. `pose` is the robot, a traffic
         car, or anything with x, y, heading and front (centre to front bumper).
+        Night lighting: lamps = street-lamp head positions (N, 3), moon = moonlight level.
         Returns (rgb, depth_m, seg, info)."""
         lighting = config.LIGHTING_PRESETS[lighting or config.LIGHTING]
         height, pitch, yaw_off, fov = config.CAMERA_MOUNT_HEIGHT, 0.0, 0.0, config.CAMERA_FOV
@@ -61,15 +67,79 @@ class RobotCamera:
         rgb = np.reshape(np.asarray(rgb, dtype=np.uint8), (self.height, self.width, 4))[:, :, :3].copy()
         depth = np.reshape(np.asarray(depth, dtype=np.float32), (self.height, self.width))
         seg = np.reshape(np.asarray(seg, dtype=np.int64), (self.height, self.width))
+        depth_m = self.depth_to_metres(depth)
+        if lighting.get("night"):
+            if moon is None:
+                moon = float(np.mean(config.NIGHT["moon"]))
+            rgb = night_scene(rgb, depth_m, seg, eye, target, fov, self.width / self.height, (fx, fy),
+                              lamps, moon, rng)
         paint_sky(rgb, seg, lighting["sky"])
         info = {"fov": fov, "height": height, "pitch_deg": math.degrees(pitch)}
-        return rgb, self.depth_to_metres(depth), seg, info
+        return rgb, depth_m, seg, info
 
     @staticmethod
     def depth_to_metres(depth_buffer):
         """PyBullet's depth buffer is 0..1 and non-linear; convert to metres."""
         near, far = config.CAMERA_NEAR, config.CAMERA_FAR
         return far * near / (far - (far - near) * depth_buffer)
+
+
+def pixel_points(depth_m, eye, target, fov_deg, aspect):
+    """World position (H, W, 3) of the surface seen in every pixel, from the depth image."""
+    H, W = depth_m.shape
+    eye = np.asarray(eye, float)
+    fwd = np.asarray(target, float) - eye
+    fwd /= np.linalg.norm(fwd)
+    right = np.cross(fwd, [0.0, 0.0, 1.0])
+    right /= np.linalg.norm(right)
+    up = np.cross(right, fwd)
+    t = math.tan(math.radians(fov_deg) / 2)
+    u = ((np.arange(W) + 0.5) / W * 2 - 1) * t * aspect
+    v = (1 - (np.arange(H) + 0.5) / H * 2) * t
+    rays = fwd[None, None] + u[None, :, None] * right[None, None] + v[:, None, None] * up[None, None]
+    return eye[None, None] + depth_m[..., None] * rays           # depth is measured along the view axis
+
+
+def night_scene(albedo, depth_m, seg, eye, target, fov_deg, aspect, heading_xy, lamps, moon, rng=None, s=None):
+    """Light a flat-rendered picture as at night: moonlight + headlights + street lamps.
+    The lit share of each surface = moon + headlight/d^2 (inside the beam) + sum of lamp/d^2,
+    with warm light colour, plus sensor noise. Sky pixels are left for paint_sky()."""
+    s = s or config.NIGHT
+    P = pixel_points(depth_m, eye, target, fov_deg, aspect)
+    light = np.full(depth_m.shape, float(moon))
+    # the car's own headlights: just below the camera, aimed ahead and slightly down
+    hx, hy = heading_xy
+    beam = np.array([hx, hy, -0.08])
+    beam /= np.linalg.norm(beam)
+    D = P - (np.asarray(eye, float) + [0.0, 0.0, -0.1])
+    dist = np.maximum(np.linalg.norm(D, axis=2), 1.0)
+    ang = np.degrees(np.arccos(np.clip((D @ beam) / dist, -1.0, 1.0)))
+    light += s["headlight"] * np.exp(-(ang / s["headlight_deg"]) ** 2) / dist ** 2
+    # street lamps near the camera
+    if lamps is not None and len(lamps):
+        L = np.asarray(lamps, float).reshape(-1, 3)
+        near = np.hypot(L[:, 0] - eye[0], L[:, 1] - eye[1]) < s["lamp_range"]
+        for lx, ly, lz in L[near]:
+            d2 = (P[..., 0] - lx) ** 2 + (P[..., 1] - ly) ** 2 + (P[..., 2] - lz) ** 2
+            light += s["lamp"] / np.maximum(d2, 0.05)
+    light = np.clip(light, 0.0, 1.3)
+    out = albedo.astype(np.float32) * light[..., None] * np.asarray(s["tint"], np.float32)[None, None]
+    if s["noise"] > 0:
+        r = rng if rng is not None else np.random.default_rng(0)
+        out += r.normal(0.0, s["noise"], out.shape)
+    out = np.clip(out, 0, 255).astype(np.uint8)
+    out[seg < 0] = albedo[seg < 0]                                # sky: painted afterwards
+    return out
+
+
+def lamp_heads(roadmap):
+    """Where the street lamps' lights are (N, 3), from the town map (same as visuals.py draws them)."""
+    heads = []
+    for ob in (roadmap.obstacles if roadmap is not None else []):
+        if ob.get("look") == "lamp":
+            (cx, cy), yaw = ob["center"], ob.get("yaw", 0.0)
+            heads.append((cx - 0.6 * math.cos(yaw), cy - 0.6 * math.sin(yaw), ob.get("z", 0.0) + 3.92))
+    return np.array(heads, dtype=float).reshape(-1, 3)
 
 
 def paint_sky(rgb, seg, colors):
@@ -88,12 +158,14 @@ def _object_ids(seg):
     return np.where(seg >= 0, seg & ((1 << 24) - 1), -1)     # strip link bits if present
 
 
-def person_boxes(seg, pedestrians, min_pixels=None):
+def person_boxes(seg, pedestrians, min_pixels=None, rgb=None, dark=None):
     """Box around the visible part of every pedestrian, read from the
-    segmentation image. Returns a list of (class 0, x1, y1, x2, y2, ped_id)."""
+    segmentation image. Returns a list of (class 0, x1, y1, x2, y2, ped_id).
+    With rgb (night / shadow pictures), people a camera could not see in the dark are
+    left out (config.CAMERA_MIN_VISIBLE): their ids are added to the list `dark`."""
     min_pixels = config.CAMERA_MIN_PIXELS if min_pixels is None else min_pixels
     ids = _object_ids(seg)
-    boxes = []
+    boxes, masks = [], []
     for ped in pedestrians:
         mask = np.isin(ids, ped.label_ids)
         if mask.sum() < min_pixels:
@@ -103,7 +175,26 @@ def person_boxes(seg, pedestrians, min_pixels=None):
         x1, x2, y1, y2 = cols[0], cols[-1] + 1, rows[0], rows[-1] + 1
         if x2 - x1 >= config.CAMERA_MIN_BOX and y2 - y1 >= config.CAMERA_MIN_BOX:
             boxes.append((0, int(x1), int(y1), int(x2), int(y2), ped.ped_id))
-    return boxes
+            masks.append(mask)
+    if rgb is None or not boxes:
+        return boxes
+    lum = rgb[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], np.float32)
+    anyone = np.any(masks, axis=0)
+    kept = []
+    for box, mask in zip(boxes, masks):
+        _, x1, y1, x2, y2, pid = box
+        w, h = x2 - x1, y2 - y1
+        ring = np.zeros_like(mask)                    # just around the person, not other people
+        ring[max(0, y1 - h // 4):y2 + h // 4, max(0, x1 - w // 2):x2 + w // 2] = True
+        ring &= ~anyone
+        me = float(lum[mask].mean())
+        behind = float(lum[ring].mean()) if ring.any() else me
+        v = config.CAMERA_MIN_VISIBLE
+        if me >= v["brightness"] or abs(me - behind) >= v["contrast"]:
+            kept.append(box)
+        elif dark is not None:
+            dark.append(pid)
+    return kept
 
 
 def car_boxes(seg, body_id_lists, min_pixels=None):

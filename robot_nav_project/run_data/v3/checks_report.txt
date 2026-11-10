@@ -2,7 +2,7 @@ Dataset run_data/v3  (made 2026-11-01T17:24:06, code version 26315efea61c, brain
 
 1. Files and versions
   [PASS] every file in the manifest exists with the same SHA-256 - 8 files
-  [info] code files changed since the dataset was made: none
+  [info] code files changed since the dataset was made: analyze_yolo.py, brains.py, camera.py, config.py, make_yolo_data.py, metrics.py, perception.py, planner.py, run_sim.py, train_lstm.py, train_yolo.py, visuals.py
   reading the per-step logs ...
 
 2. Counts

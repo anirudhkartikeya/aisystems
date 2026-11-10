@@ -1,0 +1,52 @@
+HEALTH CHECK - 2026-11-10 09:07 - /Users/anirudhpisipati/Documents/robot_nav/robot_nav_blender 4
+
+1. SETUP
+  python 3.10.20 | numpy 1.26.4 | pybullet ok | torch 2.14.0 | ultralytics 8.4.143 | PIL 12.3.0 | matplotlib 3.10.9 | skimage 0.25.2 | pandas 2.3.3
+  [PASS] LSTM v3 (default brain model) - results/lstm_v3/lstm_v3.pt
+  [PASS] LSTM v2 - results/lstm_v2/lstm_v2.pt
+  [PASS] YOLO day (yolo11n_sim_960) - runs/yolo11n_sim_960/weights/best.pt
+  [PASS] YOLO day + night (yolo11n_sim_960_night) - runs/yolo11n_sim_960_night/weights/best.pt
+  [PASS] core run dataset run_data/v3 - run_data/v3/manifest.json
+  [PASS] YOLO day dataset - dataset/data.yaml
+  [PASS] YOLO night dataset - dataset_night/data.yaml
+  [PASS] day + night training list - dataset_mix.yaml
+  [PASS] LSTM dataset (trajectories/, only needed to retrain) - trajectories/
+  settings: TRACK_FILTER=kalman, STILL_GUARD=True, LSTM_MODEL=results/lstm_v3/lstm_v3.pt, DETECT_SLICE=False, BRAIN=predictive
+
+2. BUILDING BLOCKS
+  [PASS] near-miss / contact rule (test_near_miss.py) - exit 0, 0 FAIL lines
+  [PASS] Kalman filter: training version = car version - largest difference 2.5e-16 m
+  [PASS] Kalman filter learns the camera noise - learned 0.020 m with exact positions, 0.093 m with 0.1 m noise
+  [PASS] slicing: tiles cover the picture, overlapping boxes merge - 6 tiles, kept boxes [0, 2]
+  [PASS] labels only for people a camera could see (night) - night rule keeps [6, 7], daytime rule keeps [5, 6, 7]
+
+3. DRIVING (today's settings) and 4. OLD RESULTS - 16 runs on 8 workers ...
+  [PASS] reactive brain drives with today's settings - seed 0: goal 0 contact(s), seed 1: goal 2 contact(s), seed 2: goal 0 contact(s)
+  [PASS] predictive brain drives with today's settings - seed 0: goal 0 contact(s), seed 1: goal 0 contact(s), seed 2: goal 0 contact(s)
+  [PASS] lstm brain drives with today's settings - seed 0: goal 0 contact(s), seed 1: goal 0 contact(s), seed 2: goal 0 contact(s)
+  [PASS] reactive: same result as the dev stress test (run_data/stress_dev_guard) - 3/3 runs identical
+  [PASS] predictive: same result as the dev stress test (run_data/stress_dev_guard) - 3/3 runs identical
+  [PASS] lstm: same result as the dev stress test (run_data/stress_dev_guard_v3) - 3/3 runs identical
+  [PASS] the same scene twice gives the same result - goal / goal
+  [PASS] new parts switched off -> run_data/v3 reproduced exactly - 6/6 runs identical (no filter, no guard, LSTM v2; dev + eval seeds)
+
+5. RUN_SIM (the normal command, without a window)
+  [PASS] python run_sim.py --headless works and writes its report - exit 0, 5 s, report run_reports/predictive_seed3_2026-11-10_09-07-40 | Result: goal  |  time 110.9 s  |  path 196.35 m  |  min gap 0.52 m  |  collisions 0  |  cr
+
+6. YOLO
+  [PASS] day model on dataset (whole picture) - found 38/43 people in 20 val pictures (0.88), 50 ms/picture
+  [PASS] day model on dataset (sliced) - found 39/43 people in 20 val pictures (0.91), 38 ms/picture
+  [PASS] day model on dataset_night (whole picture) - found 51/65 people in 20 val pictures (0.78), 10 ms/picture
+  [PASS] day model on dataset_night (sliced) - found 53/65 people in 20 val pictures (0.82), 34 ms/picture
+  [PASS] day + night model on dataset (whole picture) - found 39/43 people in 20 val pictures (0.91), 13 ms/picture
+  [PASS] day + night model on dataset (sliced) - found 38/43 people in 20 val pictures (0.88), 34 ms/picture
+  [PASS] day + night model on dataset_night (whole picture) - found 54/65 people in 20 val pictures (0.83), 9 ms/picture
+  [PASS] day + night model on dataset_night (sliced) - found 56/65 people in 20 val pictures (0.86), 34 ms/picture
+
+7. DATASET SCRIPTS
+  [PASS] make_yolo_data.py (day) - exit 0, 6 pictures, 6 label files
+  [PASS] make_yolo_data.py (night + dark clothes) - exit 0, 6 pictures, 6 label files
+  [PASS] check_run_dataset.py run_data/v3 - 19/19 checks passed
+
+34 PASS | 0 WARN | 0 FAIL   (44 s)
+Everything works.

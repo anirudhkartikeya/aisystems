@@ -35,15 +35,17 @@ these runs the brains get people's positions from the simulator (perfect sensing
 Every 0.1 s:
 
 1. **Perception** (`perception.py`): the car sees people only through a front camera (30 m, 90°, with occlusion)
-   plus 3 m close-range sensors, and other cars all around.
+   plus 3 m close-range sensors, and other cars all around. A **Kalman filter** (`tracking.py`) smooths every
+   person's track and learns how noisy the camera is.
 2. **Brain** (`brains.py`): predicts where each visible person will be over the next 3 s.
    - **Reactive:** where they are now.
    - **Constant velocity:** where they will be at their current speed.
-   - **LSTM v2:** 2.8 s of history plus 33 context features (curb, nearest crossing and its light, nearby cars and
-     people), predicted as a correction to constant velocity.
+   - **LSTM v3:** 2.8 s of history plus 33 context features (curb, nearest crossing and its light, nearby cars and
+     people), predicted as a correction to constant velocity; trained on noisy, Kalman-filtered tracks.
 3. **Planner** (`planner.py`, the same for all brains): scores candidate lane offsets and speed profiles 4 s ahead
    against the predicted people and other cars. It keeps a 0.5 m surface gap and rate-limits steering, then drives
-   the cheapest safe path.
+   the cheapest safe path. A **still-person guard** keeps the gap from where a standing person is, whatever the
+   brain predicts.
 4. **Metrics** (`metrics.py`): contacts and near misses use one definition everywhere: the surface gap between
    the car's footprint and the person (contact below 0 m, near miss below 0.5 m).
 
@@ -86,18 +88,33 @@ python run_sim.py --headless             # no window
 ```
 
 The [full guide](HOW_TO_RUN.md) covers the dataset, training and analysis commands. Large data (`trajectories/`,
-`dataset/`, `*.csv.gz`) is not in the repository. It can be regenerated with `make_data.py`, `make_yolo_data.py`
+`dataset/`, `dataset_night/`, `*.csv.gz`) is not in the repository. It can be regenerated with `make_data.py`, `make_yolo_data.py`
 and `make_run_dataset.py`, and the manifests' SHA-256 values verify the result.
+
+## Since then: robustness work (dev seeds)
+
+The results above are from the first version. Two weaknesses found by the stress test and the group analysis
+have been worked on since, measured on the **dev** seeds (the eval seeds stay untouched until the final re-test):
+
+| Change | Before | After |
+|---|---|---|
+| Kalman filter + LSTM v3 (noisy training) + still-person guard: LSTM runs touching a person at 0.1 m camera noise | 55% | 5% |
+| Same, at 0.3 m camera noise (constant-velocity brain) | 70% | 25% |
+| YOLO fine-tuned on night / shadow / dark-clothes pictures: recall at night | 0.71 | 0.80 |
+| ... and in daytime (nothing forgotten) | 0.86 | 0.88 |
+| + slicing (SAHI-style, off by default): very far people found | 50% | 69% |
+
+How it was found and fixed: the stress test showed the LSTM broke under position noise; a contact diagnosis
+(`diagnose_contacts.py`) showed the remaining contacts were the car driving off next to a person standing still,
+which the still-person guard fixes. A first noisy-trained LSTM looked great offline but not in the car: its
+training context still held the person's exact velocity (a data leak), fixed in `train_lstm.py --noisy`.
 
 ## What's next
 
-1. **Make the LSTM robust:** smooth tracked positions with a Kalman filter, retrain on noisy positions, add more
-   training data with cars, and output an uncertainty estimate.
-2. **Make YOLO stronger in the dark:** fine-tune on night, dark-clothing and shadow images. Add SAHI (sliced
-   inference) as a switch that stays off by default.
-3. **Deploy:** ONNX export, a FastAPI service (`/predict`, `/detect`), a Docker image and a public Hugging Face
+1. **Re-test on fresh seeds** (3000+) with all the changes, and update the results above.
+2. **Deploy:** ONNX export, a FastAPI service (`/predict`, `/detect`), a Docker image and a public Hugging Face
    Spaces demo.
-4. **Re-test on fresh seeds** (3000+) that none of these changes have seen.
+3. **Publish the datasets** on Hugging Face (YOLO day + night images, LSTM tracks, run logs).
 
 ## Tech
 

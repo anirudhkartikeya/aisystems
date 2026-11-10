@@ -36,6 +36,8 @@ BAG_COLORS = [[0.10, 0.10, 0.10, 1], [0.35, 0.20, 0.10, 1], [0.15, 0.25, 0.50, 1
               [0.25, 0.45, 0.25, 1]]
 SHOE_COLORS = [[0.08, 0.08, 0.08, 1], [0.92, 0.92, 0.9, 1], [0.35, 0.22, 0.12, 1], [0.25, 0.25, 0.3, 1],
                [0.6, 0.15, 0.15, 1]]
+DARK_CLOTHES = [[0.05, 0.05, 0.06, 1], [0.10, 0.10, 0.12, 1], [0.08, 0.10, 0.20, 1], [0.16, 0.16, 0.17, 1],
+                [0.14, 0.10, 0.07, 1], [0.10, 0.13, 0.09, 1]]       # black, charcoal, navy, dark grey/brown/olive
 PANTS = PANTS_COLORS[0]
 SKIN = SKIN_TONES[1]
 WOOD = [0.55, 0.38, 0.22, 1]
@@ -173,6 +175,12 @@ def random_person_look(rng, kind, height):
     look["hair_style"] = ("long" if rng.random() < 0.4 else "short") if kind != "elderly" else \
         ("short" if rng.random() < 0.8 else "long")
     look["hat_color"] = pick(BAG_COLORS + PANTS_COLORS[:3])
+    if config.DARK_CLOTHES_SHARE > 0 and rng.random() < config.DARK_CLOTHES_SHARE:
+        # dressed in dark colours (hard for a camera at night or in shadow); only drawn when the
+        # share is switched on, so all other runs keep exactly the same people
+        look["shirt"], look["pants"] = pick(DARK_CLOTHES), pick(DARK_CLOTHES)
+        look["coat"] = pick(DARK_CLOTHES) if look["coat"] is not None else None
+        look["shoes"] = pick(DARK_CLOTHES)
     return look
 
 

@@ -296,7 +296,30 @@ LIGHTING_PRESETS = {
                  "specular": 0.02, "shadow": 0, "sky": ((0.62, 0.64, 0.68), (0.80, 0.81, 0.83))},
     "dusk":     {"dir": (-0.5, -1.0, 0.15), "color": (0.75, 0.70, 0.85), "ambient": 0.32, "diffuse": 0.40,
                  "specular": 0.02, "shadow": 0, "sky": ((0.12, 0.14, 0.30), (0.45, 0.35, 0.50))},
+    # --- hard cases for YOLO (camera pictures only; make_yolo_data.py --lightings ...) ---
+    # night: rendered flat (ambient 1 = the surfaces' own colours), then lit in camera.night_scene()
+    # by weak moonlight, the car's own headlights and the street lamps (NIGHT below)
+    "night":    {"dir": (0.0, 0.0, 1.0), "color": (1.00, 1.00, 1.00), "ambient": 1.00, "diffuse": 0.00,
+                 "specular": 0.00, "shadow": 0, "sky": ((0.01, 0.01, 0.03), (0.05, 0.05, 0.09)), "night": True},
+    # low, hard sun with little ambient light: people in a building's shadow are very dark
+    "harsh_shadow": {"dir": (-0.7, 0.5, 0.40), "color": (1.00, 0.94, 0.82), "ambient": 0.22, "diffuse": 0.90,
+                     "specular": 0.05, "shadow": 1, "sky": ((0.40, 0.60, 0.92), (0.85, 0.86, 0.90))},
 }
+YOLO_LIGHTINGS = ["noon", "morning", "evening", "overcast", "dusk"]   # make_yolo_data.py default (the first dataset)
+NIGHT = {
+    "moon": (0.03, 0.10),        # moonlight / city glow, picked per episode (share of full daylight)
+    "headlight": 30.0,           # strength of the car's own headlights (lit share = strength / distance^2)
+    "headlight_deg": 22.0,       # half-width of the headlight beam
+    "lamp": 14.0,                # strength of one street lamp (lit share = strength / distance^2 from the lamp head)
+    "lamp_range": 35.0,          # m: lamps farther than this from the camera are ignored
+    "tint": (1.00, 0.92, 0.75),  # warm sodium / halogen light
+    "noise": 7.0,                # extra sensor noise in the dark (0-255 units)
+}
+DARK_CLOTHES_SHARE = 0.0       # share of people dressed in black / navy / dark grey (make_yolo_data.py --dark-clothes)
+# night / shadow pictures: a person only gets a label if a camera could actually see them - bright enough
+# (mean brightness 0-255) OR standing out from what is right behind them (a dark coat against a lit wall)
+CAMERA_MIN_VISIBLE = {"brightness": 14.0, "contrast": 8.0}
+NIGHT_AUGMENT_BRIGHTNESS = 0.03  # night: only a small brightness shift (the normal 0.15 turns black into grey haze)
 
 # ---------------- Robot camera (Phase 2, for YOLO) ----------------
 CAMERA_WIDTH = 640         # pixels
@@ -313,6 +336,8 @@ DATASET_DIR = "dataset"    # images/ and labels/ are written inside this folder
 CAMERA_JITTER = {"height": 0.10, "pitch_deg": 3.0, "yaw_deg": 2.0, "fov_deg": (52.0, 70.0)}
 IMAGE_AUGMENT = {"brightness": 0.15, "contrast": 0.15, "noise": 4.0, "blur_prob": 0.2}
 YOLO_LABEL_CARS = False    # True = also label cars (class 1); the project only needs people (class 0)
+DETECT_SLICE = False       # detect.py: also run YOLO on overlapping tiles (SAHI-style) - only if needed (slower)
+DETECT_SLICE_SETTINGS = {"tile": 320, "overlap": 0.25, "tile_imgsz": 640}   # px tiles, their overlap, size YOLO sees
 
 # ---------------- Datasets (make_data.py, make_yolo_data.py) ----------------
 # Whole episodes (seeds) go to one split, never mixed: seed % 20 -> 0-13 train, 14-16 val, 17-19 test

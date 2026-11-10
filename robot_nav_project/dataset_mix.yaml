@@ -1,0 +1,7 @@
+# day (dataset/) + night / shadow / dark clothes (dataset_night/) together, for fine-tuning
+path: /Users/anirudhpisipati/Documents/robot_nav/robot_nav_blender 4
+train: [dataset/images/train, dataset_night/images/train]
+val: [dataset/images/val, dataset_night/images/val]
+test: [dataset/images/test, dataset_night/images/test]
+names:
+  0: person

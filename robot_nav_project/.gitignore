@@ -7,3 +7,6 @@ __pycache__/
 last.pt
 yolo11n.pt
 .DS_Store
+dataset_night*/
+health_check_tmp/
+reports/

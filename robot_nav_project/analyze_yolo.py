@@ -2,6 +2,8 @@
 
     python analyze_yolo.py
     python analyze_yolo.py --model runs/yolo11n_sim/weights/best.pt --conf 0.25
+    python analyze_yolo.py --model runs/yolo11n_sim_960/weights/best.pt --imgsz 960 --data dataset_night --tag _night
+    python analyze_yolo.py ... --slice --tag _sliced     # with slicing (detect.py, SAHI-style), timed
 
 Runs the trained detector on the VALIDATION pictures (the test split stays untouched),
 matches its boxes to the true boxes (IoU >= 0.5) and reports:
@@ -13,6 +15,7 @@ matches its boxes to the true boxes (IoU >= 0.5) and reports:
 Saves everything in runs/<name>/analysis/.
 """
 import argparse
+import time
 import csv
 import glob
 import os
@@ -31,6 +34,7 @@ ap.add_argument("--conf", type=float, default=0.25, help="confidence threshold f
 ap.add_argument("--iou", type=float, default=0.5, help="overlap needed to count a detection as correct")
 ap.add_argument("--imgsz", type=int, default=640, help="picture size the model was trained with")
 ap.add_argument("--tag", default="", help="added to the output names, e.g. conf015")
+ap.add_argument("--slice", action="store_true", help="detect.py with slicing (tiles), SAHI-style")
 args = ap.parse_args()
 
 out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(args.model))), "analysis")
@@ -85,12 +89,23 @@ model = YOLO(args.model)
 found = defaultdict(lambda: [0, 0])          # group -> [found, total]
 dets = defaultdict(lambda: [0, 0])           # lighting -> [correct detections, all detections]
 per_image = []
-for res in model.predict(source=images, conf=args.conf, imgsz=args.imgsz, device=device, stream=True, verbose=False):
-    name = os.path.splitext(os.path.basename(res.path))[0]
+
+
+def detections():
+    """(picture path, boxes as shares of width/height, confidences) for every picture.
+    One picture at a time through detect.py - the same way with and without slicing (a long
+    stream of pictures can stall YOLO's box merging on the Mac GPU: "NMS time limit exceeded")."""
+    from detect import detect
+    for path in images:
+        b, c = detect(model, path, conf=args.conf, imgsz=args.imgsz, slice=args.slice, device=device)
+        yield path, b, c
+
+
+t_start = time.time()
+for path, pred, conf in detections():
+    name = os.path.splitext(os.path.basename(path))[0]
     meta = info.get(name, {})
     gt = read_labels(name)
-    pred = res.boxes.xyxyn.cpu().numpy() if res.boxes is not None else np.zeros((0, 4))
-    conf = res.boxes.conf.cpu().numpy() if res.boxes is not None else np.zeros(0)
     order = np.argsort(-conf)
     pred, conf = pred[order], conf[order]
     ious = iou_matrix(pred, gt)
@@ -116,12 +131,16 @@ for res in model.predict(source=images, conf=args.conf, imgsz=args.imgsz, device
     light = meta.get("lighting", "?")
     dets[light][0] += int(pred_ok.sum()); dets[light][1] += len(pred)
     dets["ALL"][0] += int(pred_ok.sum()); dets["ALL"][1] += len(pred)
-    per_image.append({"name": name, "path": res.path, "gt": gt, "gt_hit": gt_hit, "pred": pred,
+    per_image.append({"name": name, "path": path, "gt": gt, "gt_hit": gt_hit, "pred": pred,
                       "pred_ok": pred_ok, "misses": int((~gt_hit).sum()), "false": int((~pred_ok).sum()),
                       "lighting": light})
 
 # ---------------- tables ----------------
-rows = []
+ms_per_picture = (time.time() - t_start) / max(1, len(per_image)) * 1000
+print(f"\n{'SLICED (tiles + whole picture)' if args.slice else 'whole picture'}: "
+      f"{ms_per_picture:.0f} ms per picture (incl. reading it)")
+rows = [{"group": "ms per picture" + (" (sliced)" if args.slice else ""), "found": None, "people": None,
+         "recall": round(ms_per_picture, 1)}]
 print(f"\nRECALL (share of people found), {args.split} split, conf >= {args.conf}, IoU >= {args.iou}")
 print(f"{'group':55s} {'found':>7s} {'people':>7s} {'recall':>7s}")
 for g in sorted(found, key=lambda g: (g != "ALL", g)):
